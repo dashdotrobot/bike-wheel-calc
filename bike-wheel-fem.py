@@ -719,7 +719,7 @@ class BicycleWheelGeom:
             self.parse_wheel_file(wheel_file)
 
 class RimSection:
-    'Section definition for rim'
+    'Section definition for rim elements'
     
     def __init__(self, area, I11, I22, I33, young_mod, shear_mod, K2=1.0, K3=1.0):
         self.area = area
@@ -732,7 +732,7 @@ class RimSection:
         self.K3 = K3
 
 class SpokeSection:
-    'Section definition for spoke'
+    'Section definition for spoke elements'
     
     def __init__(self, d_spoke, young_mod):
         self.young_mod = young_mod
@@ -777,6 +777,7 @@ class FEMSolution:
         return u_rad, u_tan
 
     def get_deformed_coords(self, node_id, scale_rad, scale_tan):
+        'Get coordinates of nodes in scaled deformed configuration.'
 
         # Allow array input for node_id and/or dof
         if not hasattr(node_id, '__iter__'):
@@ -831,7 +832,6 @@ class FEMSolution:
 
         # Plot deformed rim
         pp.plot(r_def_ii * np.cos(theta_def_ii), r_def_ii * np.sin(theta_def_ii), 'k', linewidth=3.0)
-
 
         # Plot spokes in deformed configuration
         for e in [x for x in range(len(self.el_type)) if self.el_type[x] == EL_SPOKE]:
