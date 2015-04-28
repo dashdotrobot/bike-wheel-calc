@@ -11,7 +11,6 @@ EL_RIM = 1
 EL_SPOKE = 2
 TWOPI = 2*np.pi
 
-# New line here
 
 def skew_symm(v):
     return np.matrix([[0,     v[2], -v[1]],
