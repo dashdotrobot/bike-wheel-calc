@@ -15,12 +15,16 @@ TWOPI = 2*np.pi
 
 
 def skew_symm(v):
+    'Create a skew-symmetric tensor V from vector v such that V*u = v cross u.'
+
     return np.matrix([[0,     v[2], -v[1]],
                       [-v[2], 0,     v[0]],
                       [v[1], -v[0],  0   ]])
                     
 def interp_periodic(x, y, xx, period=TWOPI):
-    # Calculate coordinates in deformed configuration
+    'Interpolate a periodic function with cubic spline matching slope at ends.'
+
+    # Pad data by wrapping beginning and end to match derivatives
     x_pad = np.concatenate(([x[-1] - period], x, [x[0] + period, x[1] + period]))
     y_pad = np.concatenate(([y[-1]], y, [y[0], y[1]]))
 
@@ -33,43 +37,54 @@ class BicycleWheelFEM:
     'Finite-element implementation and methods'
     
     def get_node_pos(self, node_id):
+        'Return an NdArray of [X,Y,Z] position of node.'
         return np.array([self.x_nodes[node_id], 
                          self.y_nodes[node_id], 
                          self.z_nodes[node_id]])
     
     def get_rim_nodes(self):
+        'Return node IDs of all nodes on the rim.'
         return np.arange(self.geom.n_rim_nodes)
 
     def get_hub_nodes(self):
+        'Return node IDs of all nodes on the hub.'
         return np.arange(self.geom.n_hub_nodes) + self.geom.n_rim_nodes
 
     def get_spoke_tension(self, u):
-            
-        f_spokes = np.array(self.k_spokes.dot(u)).flatten()
-        T_spokes = []
+        'Calculate tension in all spokes.'
         
+        f_spokes = np.array(self.k_spokes.dot(u)).flatten()
+        t_spokes = []
+        
+        # Iterate over spoke elements
         for e in [x for x in range(len(self.el_type)) if self.el_type[x] == EL_SPOKE]:
             
-            n1 = self.el_n1[e]
-            n2 = self.el_n2[e]
+            n1 = self.el_n1[e]  # hub node
+            n2 = self.el_n2[e]  # rim node
             
-            e1 = self.get_node_pos(n2) - self.get_node_pos(n1)
-            f2 = np.array(f_spokes[6*n2:6*n2+3:])
-            T_spokes.append(e1.dot(f2) / np.sqrt(e1.dot(e1)))
+            e1 = self.get_node_pos(n2) - self.get_node_pos(n1)  # vector along spoke
+            f2 = np.array(f_spokes[6*n2:6*n2+3:])               # force vector at rim node
+            t_spokes.append(e1.dot(f2) / np.sqrt(e1.dot(e1)))
             
-        return np.array(T_spokes)
+        return np.array(t_spokes)
     
     def calc_k_rim(self, node1, node2, ref, sec):
+        """Calculate stiffness matrix for a single rim element.
+
+        For details, see R. Palaninathan, P.S. Chandrasekharan,
+        Computers and Structures, 4(21), pp. 663-669, 1985."""
+
         node1_pos = self.get_node_pos(node1)
         node2_pos = self.get_node_pos(node2)
-        d = node2_pos - node1_pos
-        r1 = node1_pos - ref
+
+        d = node2_pos - node1_pos  # beam orientation vector
+        r1 = node1_pos - ref       # radial vector to node 1
+        R = np.sqrt(r1.dot(r1))    # radius of curvature
         
-        R = np.sqrt(r1.dot(r1))
-        
+        # angle subtended by arc segment
         phi0 = 2*np.arcsin(np.sqrt(d.dot(d)) / (2*R))
         
-        # Beam coordinates
+        # local coordinate system
         e1 =  d / np.sqrt(d.dot(d))
         e3 = -self.geom.n_vec
         e2 =  np.cross(e3,e1)
@@ -87,7 +102,7 @@ class BicycleWheelFEM:
         # Initialize stiffness matrix
         k_r = np.matrix(np.zeros((12,12)))
         
-        # Flexibility matrix
+        # Flexibility matrix for node 1 DOFs
         a = np.matrix(np.zeros((6,6)))
         
         a[0,0] = R*N/(2*sec.young_mod*sec.area) + sec.K2*R*B/(2*sec.shear_mod*sec.area) + C*R**3/(2*sec.young_mod*sec.I33)
@@ -125,8 +140,7 @@ class BicycleWheelFEM:
         b[3,4] = -a[3,4]
         b[4,3] = -a[4,3]
         
-        # Transformation matrix for K_II -> K_IJ
-        
+        # Transformation matrix from node 1 -> node 2
         al = np.cos(phi0)
         bt = np.sin(phi0)
         
@@ -137,19 +151,19 @@ class BicycleWheelFEM:
                           [0, 0, -R*bt,    -bt, -al, 0],
                           [R*(1-al), R*bt, 0, 0, 0, -1]])
                           
-        # Transform stiffness matrix to beam coordinates
+        # Transformation matrix from node 1 -> beam coordinates
         Tb = np.matrix(np.zeros((6,6)))
         Tb[:3:,:3:] = np.matrix([[np.cos(phi0/2), -np.sin(phi0/2), 0],
                                  [np.sin(phi0/2),  np.cos(phi0/2), 0],
                                  [0,               0,              1]])
         Tb[3::,3::] = Tb[:3:,:3:]
-                        
-        # Transform stiffness matrix to global coordinates
+
+        # Transformation matrix from beam coordinates to global coordinates
         Tg = np.matrix(np.zeros((6,6)))
         Tg[:3:,:3:] = np.matrix(np.vstack((e1,e2,e3)).T)
         Tg[3::,3::] = Tg[:3:,:3:]
-                
-        
+
+        # Assemble submatrices
         k_r[:6:,:6:] = np.linalg.inv(a)    # K_II
         k_r[6::,6::] = np.linalg.inv(b)    # K_JJ
         k_r[6::,:6:] = Tbar * k_r[:6:,:6:] # K_JI
@@ -162,13 +176,15 @@ class BicycleWheelFEM:
         return k_r
     
     def calc_k_spoke(self, node1, node2, sec):
+        'Calculate stiffness matrix for thin elastic rod (no bending or torsion).'
+
         node1_pos = self.get_node_pos(node1)
         node2_pos = self.get_node_pos(node2)
         
         # Tangent vector
         e1 = node2_pos - node1_pos
         l = np.sqrt(e1.dot(e1))
-        e1 = e1 / l
+        e1 = e1 / l # convert to unit vector
         
         # Rotation matrix to global coordinates
         Tg = np.matrix(np.zeros((6,6)))
@@ -183,6 +199,7 @@ class BicycleWheelFEM:
         return k_spoke
     
     def calc_stiff_mat(self):
+        'Calculate global stiffness matrix by element scatter algorithm.'
     
         print('# Calculating global stiffness matrix ---')
         print('# -- Nodes: {:d}'.format(self.n_nodes))
@@ -220,6 +237,8 @@ class BicycleWheelFEM:
         self.k_global = self.k_rim + self.k_spokes
     
     def add_rigid_body(self, rigid_body):
+        'Constrain nodes to move together as a rigid body.'
+
         # Convert stiffness equation into reduced equation
         #   U  = C * U_reduced
         #   F_reduced = B * F
@@ -232,7 +251,6 @@ class BicycleWheelFEM:
                 print('*** Nodes cannot belong to multiple rigid bodies')
                 print('***  -- Node {:d}\n'.format(rigid_body.nodes[in_rig.index(True)]))
                 return
-
 
         # Add new rigid body
         self.rigid.append(rigid_body)
@@ -290,6 +308,7 @@ class BicycleWheelFEM:
         self.soln_updated = False
         
     def add_constraint(self, node_id, dof, u=0):
+        'Add a displacement constraint (Dirichlet boundary condition).'
     
         # Allow array input for node_id and/or dof
         if not hasattr(node_id, '__iter__'):
@@ -313,6 +332,7 @@ class BicycleWheelFEM:
                     print('\n*** Node {:d}, DOF {:d}: Cannot assign a constraint and force simultaneously\n',format(n,d))
 
     def add_force(self, node_id, dof, f):
+        'Add a concentrated force (Neumann boundary condition).'
         
         dof_r = 6*node_id + dof
         
@@ -327,6 +347,7 @@ class BicycleWheelFEM:
             print('\n*** Node {:d}: Cannot assign a constraint and force simultaneously\n'.format(node_id))
     
     def remove_bc(self, node_id, dof):
+        'Remove one or more boundary conditions.'
     
         if not hasattr(node_id, '__iter__'):
             node_id = [node_id]
@@ -349,6 +370,7 @@ class BicycleWheelFEM:
                 self.soln_updated = False
     
     def solve(self):
+        'Solve elasticity equations for nodal displacements.'
 
         # Form augmented, reduced stiffness matrix
         if self.k_global == None:
