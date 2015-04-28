@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+'Finite-element solver for performing stress analysis on a bicycle wheel.'
+
 import numpy as np
 from scipy import interpolate
 import matplotlib.pyplot as pp
