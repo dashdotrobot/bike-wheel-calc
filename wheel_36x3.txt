@@ -1,4 +1,17 @@
-# 
+# Wheel definitiol file
+# This file specifies rim, hub geometry and lacing pattern
+# All lines starting with '#' are ignored
+#
+# A wheel file consists of 3 keyword lines, followed by optional data lines
+# The keywoards are RIM, HUB, and LACING
+#
+# All lengths are in meters
+#
+# RIM diam=<diameter> spacing=(default,custom) N=<num spoke nipples>
+#
+#   If spacing=custom is specified, RIM line should be followed by
+#   lines specifying locations (angles) of spoke nipples
+#   <nipple #> <angle CCW from bottom>
 RIM diam=0.6 spacing=default N=36
   1    0
   2   10
@@ -36,6 +49,12 @@ RIM diam=0.6 spacing=default N=36
  34  330
  35  340
  36  350
+# HUB diam=<diameter> [diam_drive=<diameter>] width=<width> [width_drive=<width>] ...
+#     spacing=(default,custom) N=<num flange holes>
+#
+#   If spacing=custom is specified, HUB line should be followed by
+#   lines specifying locations (angles) of spoke nipples
+#   <hole #> <angle CCW from bottom> [D for drive-side]
 HUB diam=0.04 spacing=default N=36 width=0.03
   1    0 D
   2   10
