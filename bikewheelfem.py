@@ -431,6 +431,8 @@ class BicycleWheelFEM:
         rxn_red = np.array(k_red.dot(u_red) - f_aug).flatten()
         dof_rxn = [6*self.node_r_id[i/6] + i % 6 for i in range(6*self.n_nodes) if self.bc_const[i]]
         soln.nodal_rxn = rxn_red[dof_rxn]
+
+        # TODO: Convert reduced DOF ids to global DOF ids
         soln.dof_rxn = dof_rxn
 
         # spoke tension
