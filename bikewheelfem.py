@@ -831,7 +831,7 @@ class FEMSolution:
                 self.geom.d_rim/2 * np.sin(theta_ii),'k:')
 
         # Plot deformed rim
-        pp.plot(r_def_ii * np.cos(theta_def_ii), r_def_ii * np.sin(theta_def_ii), 'k', linewidth=3.0)
+        pp.plot(r_def_ii * np.cos(theta_def_ii), r_def_ii * np.sin(theta_def_ii), 'k', linewidth=2.0)
 
         # Plot spokes in deformed configuration
         for e in [x for x in range(len(self.el_type)) if self.el_type[x] == EL_SPOKE]:
