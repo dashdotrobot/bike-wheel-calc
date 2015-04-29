@@ -1,4 +1,4 @@
-# Wheel definition file for 700c 36-spoked cross-3 wheel
+# Wheel definition file for 700c 36-spoked cross-2 wheel
 # This file specifies rim, hub geometry and lacing pattern
 #
 RIM diam=0.6 spacing=default N=36
