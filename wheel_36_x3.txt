@@ -1,138 +1,42 @@
-# Wheel definition file
+# Wheel definition file for 700c 36-spoked cross-3 wheel
 # This file specifies rim, hub geometry and lacing pattern
-# All lines starting with '#' are ignored
 #
-# A wheel file consists of 3 keyword lines, followed by optional data lines
-# The keywoards are RIM, HUB, and LACING
-#
-# All lengths are in meters
-#
-# RIM diam=<diameter> spacing=(default,custom) N=<num spoke nipples>
-#
-#   If spacing=custom is specified, RIM line should be followed by
-#   lines specifying locations (angles) of spoke nipples
-#   <nipple #> <angle CCW from bottom>
 RIM diam=0.6 spacing=default N=36
-  1    0
-  2   10
-  3   20
-  4   30
-  5   40
-  6   50
-  7   60
-  8   70
-  9   80
- 10   90
- 11  100
- 12  110
- 13  120
- 14  130
- 15  140
- 16  150
- 17  160
- 18  170
- 19  180
- 20  190
- 21  200
- 22  210
- 23  220
- 24  230
- 25  240
- 26  250
- 27  260
- 28  270
- 29  280
- 30  290
- 31  300
- 32  310
- 33  320
- 34  330
- 35  340
- 36  350
-# HUB diam=<diameter> [diam_drive=<diameter>] width=<width> [width_drive=<width>] ...
-#     spacing=(default,custom) N=<num flange holes>
-#
-#   If spacing=custom is specified, HUB line should be followed by
-#   lines specifying locations (angles) of spoke nipples
-#   <hole #> <angle CCW from bottom> [D for drive-side]
 HUB diam=0.04 spacing=default N=36 width=0.03
-  1    0 D
-  2   10
-  3   20 D
-  4   30
-  5   40 D 
-  6   50
-  7   60 D
-  8   70
-  9   80 D
- 10   90
- 11  100 D
- 12  110
- 13  120 D
- 14  130
- 15  140 D
- 16  150
- 17  160 D
- 18  170
- 19  180 D
- 20  190
- 21  200 D
- 22  210
- 23  220 D
- 24  230
- 25  240 D
- 26  250
- 27  260 D
- 28  270
- 29  280 D
- 30  290
- 31  300 D
- 32  310
- 33  320 D
- 34  330
- 35  340 D
- 36  350
-# LACING pattern=[custom]
-#
-#   If pattern=custom is specified, LACING line should be followed by
-#   one line for each spoke consisting of:
-#     <hub hole #> <rim hole #>
-#
-#   Not every hub or rim node needs to be connected
 LACING pattern=custom
-    29     1
-    30     2
-    11     3
-    12     4
-    33     5
-    34     6
-    15     7
-    16     8
-     1     9
-     2    10
-    19    11
-    20    12
-     5    13
-     6    14
-    23    15
-    24    16
-     9    17
-    10    18
-    27    19
-    28    20
-    13    21
-    14    22
-    31    23
-    32    24
-    17    25
-    18    26
-    35    27
-    36    28
-    21    29
-    22    30
-     3    31
-     4    32
-    25    33
-    26    34
-     7    35
-     8    36
+    31     1
+    32     2
+     9     3
+    10     4
+    35     5
+    36     6
+    13     7
+    14     8
+     3     9
+     4    10
+    17    11
+    18    12
+     7    13
+     8    14
+    21    15
+    22    16
+    11    17
+    12    18
+    25    19
+    26    20
+    15    21
+    16    22
+    29    23
+    30    24
+    19    25
+    20    26
+    33    27
+    34    28
+    23    29
+    24    30
+     1    31
+     2    32
+    27    33
+    28    34
+     5    35
+     6    36

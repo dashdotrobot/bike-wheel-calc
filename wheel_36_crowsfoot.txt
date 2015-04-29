@@ -1,6 +1,6 @@
-# Wheel definition file
+# Wheel definition file for 700c 36-spoked crows-foot wheel
 # This file specifies rim, hub geometry and lacing pattern
-# All lines starting with '#' are ignored
+#
 RIM diam=0.6 spacing=default N=36
 HUB diam=0.04 spacing=default N=36 width=0.03
 LACING pattern=custom
