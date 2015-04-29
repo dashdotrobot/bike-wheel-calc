@@ -30,9 +30,9 @@ fem.add_rigid_body(R1)
 fem.add_constraint(R1.node_id, range(6))
 
 # Add an upward force, distributed over bottom 3 nodes
-fem.add_force(0, 1, 500)
-fem.add_force(1, 1, 250)
-fem.add_force(35, 1, 250)
+fem.add_force(0,1,500)
+fem.add_force(1,1,250)
+fem.add_force(35,1,250)
 
 soln = fem.solve()
 
@@ -60,9 +60,9 @@ R1 = RigidBody('hub', [0, 0, 0], fem.get_hub_nodes())
 fem.add_rigid_body(R1)
 fem.add_constraint(R1.node_id, range(6))
 
-fem.add_force(0, 1, 500)
-fem.add_force(1, 1, 250)
-fem.add_force(35, 1, 250)
+fem.add_force(0,1,500)
+fem.add_force(1,1,250)
+fem.add_force(35,1,250)
 
 soln = fem.solve()
 
