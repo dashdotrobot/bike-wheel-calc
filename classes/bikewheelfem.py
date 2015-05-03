@@ -40,8 +40,8 @@ class BicycleWheelFEM:
     def get_spoke_tension(self, u):
         'Calculate tension in all spokes.'
 
-        f_spokes = np.array(self.k_spokes.dot(u)).flatten()
-        t_spokes = []
+        f = np.array(self.k_spokes.dot(u)).flatten()
+        t = []
 
         # Iterate over spoke elements
         for e in [x for x in range(len(self.el_type)) if self.el_type[x] == EL_SPOKE]:
@@ -50,10 +50,55 @@ class BicycleWheelFEM:
             n2 = self.el_n2[e]  # rim node
 
             e1 = self.get_node_pos(n2) - self.get_node_pos(n1)  # vector along spoke
-            f2 = np.array(f_spokes[6*n2:6*n2+3:])               # force vector at rim node
-            t_spokes.append(e1.dot(f2) / np.sqrt(e1.dot(e1)))
+            f2 = np.array(f[6*n2:6*n2+3:])                      # force vector at rim node
+            t.append(e1.dot(f2) / np.sqrt(e1.dot(e1)))
 
-        return np.array(t_spokes)
+        return np.array(t)
+
+    def get_rim_stresses(self, u):
+        'Calculate internal forces at each rim node.'
+
+        f = np.array(self.k_rim.dot(u)).flatten()
+        t = []    # tension
+        v_i = []  # in-plan shear
+        v_o = []  # out-of-plane shear
+        m_t = []  # torsion moment (twist)
+        m_w = []  # bending moment (wobble)
+        m_s = []  # bending moment (squash)
+        
+
+        # iterate over rim elements
+        for e in [x for x in range(len(self.el_type)) if self.el_type[x] == EL_RIM]:
+
+            n1 = self.el_n1[e]
+
+            r = self.get_node_pos(n1)  # radial vector
+
+            e3 = np.array([0, 0, 1])    # outward wheel normal vector
+            e2 = r / np.sqrt(r.dot(r))  # radial unit vector
+            e1 = np.cross(e2, e3)
+
+            f_total = f[6*n1:6*n1+3:]    # total force
+            m_total = f[6*n1+3:6*n1+6:]  # total moment
+
+            t.append(f_total.dot(e1))
+            v_i.append(f_total.dot(e2))
+            v_o.append(f_total.dot(e3))
+
+            m_t.append(m_total.dot(e1))
+            m_w.append(m_total.dot(e2))
+            m_s.append(m_total.dot(e3))
+
+        t = np.array(t)
+        v_i = np.array(v_i)
+        v_o = np.array(v_o)
+        m_t = np.array(m_t)
+        m_w = np.array(m_w)
+        m_s = np.array(m_s)
+
+        return t, v_i, v_o, m_t, m_w, m_s
+
+
 
     def calc_k_rim(self, node1, node2, ref, sec):
         """Calculate stiffness matrix for a single rim element.
@@ -422,7 +467,10 @@ class BicycleWheelFEM:
         soln.dof_rxn = dof_rxn
 
         # spoke tension
-        soln.spoke_t = self.get_spoke_tension(soln.nodal_disp)
+        soln.spokes_t = self.get_spoke_tension(soln.nodal_disp)
+
+        soln.rim_t, soln.rim_v_i, soln.rim_v_o, soln.rim_m_t, soln.rim_m_w, soln.rim_m_s = \
+            self.get_rim_stresses(soln.nodal_disp)
 
         print('# ---------------------------------------')
 

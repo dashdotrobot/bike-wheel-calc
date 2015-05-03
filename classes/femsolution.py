@@ -125,10 +125,17 @@ class FEMSolution:
         self.el_n1 = fem.el_n1.copy()
         self.el_n2 = fem.el_n2.copy()
 
+        # nodal displacements and reation forces
         self.nodal_disp = []
         self.nodal_rxn = []
         self.dof_rxn = []
-        self.spoke_t = []
-        self.rim_n = []
-        self.rim_v = []
-        self.rim_m = []
+
+        # internal forces at each node
+        self.spokes_t = []  # spoke tension
+        
+        self.rim_t = []     # rim tension (hoop stress)
+        self.rim_v_i = []   # in-plane shear
+        self.rim_v_o = []   # out-of-plane shear
+        self.rim_m_s = []   # bending moment (squash)
+        self.rim_m_w = []   # bending moment (wobble)
+        self.rim_m_t = []   # torsion moment (twist)
