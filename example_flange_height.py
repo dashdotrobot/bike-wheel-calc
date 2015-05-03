@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
-from bikewheelfem import *
+from classes.bikewheelfem import *
+from classes.wheelgeometry import WheelGeometry
 import matplotlib.pyplot as pp
 
 
 # Initialize wheel geometry from wheel files
-geom = BicycleWheelGeom(wheel_file='wheel_36_x3.txt')
+geom = WheelGeometry(wheel_file='wheel_36_x3.txt')
 
 # Rim section and material properties
 r_sec = RimSection(area=82.0e-6,      # cross-sectional area

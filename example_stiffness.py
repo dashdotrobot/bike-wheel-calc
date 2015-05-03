@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 
-from bikewheelfem import *
+from classes.bikewheelfem import *
 import matplotlib.pyplot as pp
 
 
 # Initialize wheel geometry from wheel files
 geom = []
-geom.append(BicycleWheelGeom(wheel_file='wheel_36_x1.txt'))
-geom.append(BicycleWheelGeom(wheel_file='wheel_36_x2.txt'))
-geom.append(BicycleWheelGeom(wheel_file='wheel_36_x3.txt'))
-geom.append(BicycleWheelGeom(wheel_file='wheel_36_x4.txt'))
-geom.append(BicycleWheelGeom(wheel_file='wheel_36_crowsfoot.txt'))
+geom.append(WheelGeometry(wheel_file='wheel_36_x1.txt'))
+geom.append(WheelGeometry(wheel_file='wheel_36_x2.txt'))
+geom.append(WheelGeometry(wheel_file='wheel_36_x3.txt'))
+geom.append(WheelGeometry(wheel_file='wheel_36_x4.txt'))
+geom.append(WheelGeometry(wheel_file='wheel_36_crowsfoot.txt'))
 
 
 # Rim section and material properties
