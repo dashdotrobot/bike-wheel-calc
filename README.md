@@ -25,9 +25,20 @@ as where you write python scripts.
 
 * LICENSE - MIT license
 * README.md - this file
-* bikewheelfem.py - Python module
 * example_"".py - Example scripts
 * wheel_"".txt - Example wheel definition files
+* classes/
+ * bikewheelfem.py - BicycleWheelFEM class. Core finite-element solver routines
+ * femsolution.py - FEMSolution class. Result database and post-processing / visualization methods.
+ * helpers.py - utility methods
+ * rigidbody.py - RigidBody class. A rigid body object constrains multiple nodes to move rigidly.
+ * rimsection.py - RimSection class. Rim material and section properties
+ * spokesection.py - SpokeSection class. Spoke material and section properties
+ * wheelgeometry.py - WheelGeometry class. Methods for parsing wheel files
+
+## Usage
+
+
 
 ## The Model
 
