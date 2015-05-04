@@ -47,8 +47,8 @@ pp.savefig('def_36x3.png')
 f2 = pp.figure(2)
 
 # Move bars so loaded spokes appear in center
-ind_shift = (np.arange(len(soln.spoke_t)) + 18) % 36
-pp.bar(range(len(soln.spoke_t)), soln.spoke_t[ind_shift])
+ind_shift = (np.arange(len(soln.spokes_t)) + 18) % 36
+pp.bar(range(len(soln.spokes_t)), soln.spokes_t[ind_shift])
 pp.xlabel('spoke number')
 pp.ylabel('change in spoke tension [Newtons]')
 pp.savefig('spoke_t_36x3.png')
@@ -77,8 +77,8 @@ pp.savefig('def_36x3.png')
 f4 = pp.figure(4)
 
 # Move bars so loaded spokes appear in center
-ind_shift = (np.arange(len(soln.spoke_t)) + 18) % 36
-pp.bar(range(len(soln.spoke_t)), soln.spoke_t[ind_shift])
+ind_shift = (np.arange(len(soln.spokes_t)) + 18) % 36
+pp.bar(range(len(soln.spokes_t)), soln.spokes_t[ind_shift])
 pp.xlabel('spoke number')
 pp.ylabel('change in spoke tension [Newtons]')
 pp.savefig('spoke_t_36x3.png')

@@ -58,28 +58,32 @@ class BicycleWheelFEM:
     def get_rim_stresses(self, u):
         'Calculate internal forces at each rim node.'
 
-        f = np.array(self.k_rim.dot(u)).flatten()
         t = []    # tension
         v_i = []  # in-plan shear
         v_o = []  # out-of-plane shear
         m_t = []  # torsion moment (twist)
         m_w = []  # bending moment (wobble)
         m_s = []  # bending moment (squash)
-        
 
         # iterate over rim elements
         for e in [x for x in range(len(self.el_type)) if self.el_type[x] == EL_RIM]:
 
             n1 = self.el_n1[e]
+            n2 = self.el_n2[e]
+
+            k_rim = self.calc_k_rim(n1, n2, np.array([0, 0, 0]), self.rim_sec)
+            u_el = np.concatenate((u[6*n1:6*n1+6:], u[6*n2:6*n2+6])).flatten()
+
+            f_rim = np.array(k_rim.dot(u_el)).flatten()
 
             r = self.get_node_pos(n1)  # radial vector
 
-            e3 = np.array([0, 0, 1])    # outward wheel normal vector
             e2 = r / np.sqrt(r.dot(r))  # radial unit vector
+            e3 = np.array([0, 0, 1])    # outward wheel normal vector
             e1 = np.cross(e2, e3)
 
-            f_total = f[6*n1:6*n1+3:]    # total force
-            m_total = f[6*n1+3:6*n1+6:]  # total moment
+            f_total = f_rim[0:3:]  # total force
+            m_total = f_rim[3:6:]  # total moment
 
             t.append(f_total.dot(e1))
             v_i.append(f_total.dot(e2))
