@@ -71,7 +71,7 @@ soln = fem.solve()
 f3 = pp.figure(3)
 f_def = soln.plot_deformed_wheel(scale_rad=0.05)
 pp.axis('off')
-pp.savefig('def_36x3.png')
+pp.savefig('def_crow.png')
 
 # Plot spoke tension
 f4 = pp.figure(4)
@@ -81,6 +81,6 @@ ind_shift = (np.arange(len(soln.spokes_t)) + 18) % 36
 pp.bar(range(len(soln.spokes_t)), soln.spokes_t[ind_shift])
 pp.xlabel('spoke number')
 pp.ylabel('change in spoke tension [Newtons]')
-pp.savefig('spoke_t_36x3.png')
+pp.savefig('spoke_t_crow.png')
 
 pp.show()
