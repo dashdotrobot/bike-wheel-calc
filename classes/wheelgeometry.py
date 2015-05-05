@@ -207,11 +207,7 @@ class WheelGeometry:
 
         print('# Initializing wheel geometry -----------')
 
-        # self.d_rim = d_rim   # rim diameter
-        # self.d_hub = d_hub   # hub diameter
-        # self.w1_hub = w1_hub # width from rim center to left flange
-        # self.w2_hub = w2_hub # width from rim center to right flange
-        self.n_vec = n_vec   # axial vector from hub center to drive side nut
+        self.n_vec = n_vec  # axial vector from hub center to drive side nut
 
         if wheel_file is not None:
             self.parse_wheel_file(wheel_file)

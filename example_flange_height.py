@@ -23,6 +23,8 @@ s_sec = SpokeSection(2.0e-3,  # spoke diameter
 
 diam_flange = np.linspace(0.01, 0.1, 10)
 
+rot_stiff = []
+
 for d in diam_flange:
 
     # Create FEM model
@@ -47,9 +49,13 @@ for d in diam_flange:
 
     i_rxn = 9  # index of reaction torque on rim
 
+    rot_stiff.append(soln.nodal_rxn[i_rxn])
+
     pp.plot(d*100, soln.nodal_rxn[i_rxn], 'ro')
 
 pp.xlabel('flange diameter [cm]')
 pp.ylabel('wind-up stiffness [N-m / degree]')
 
 pp.show()
+
+print(rot_stiff)
