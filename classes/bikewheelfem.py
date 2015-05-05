@@ -102,8 +102,6 @@ class BicycleWheelFEM:
 
         return t, v_i, v_o, m_t, m_w, m_s
 
-
-
     def calc_k_rim(self, node1, node2, ref, sec):
         """Calculate stiffness matrix for a single rim element.
 
@@ -344,6 +342,10 @@ class BicycleWheelFEM:
 
         self.soln_updated = False
 
+    def remove_rigid_body(self, rigid_body):
+        # TODO
+        pass
+
     def add_constraint(self, node_id, dof, u=0):
         'Add a displacement constraint (Dirichlet boundary condition).'
 
@@ -396,8 +398,6 @@ class BicycleWheelFEM:
 
                 dof_r = 6*n + d
 
-                print(dof_r)
-
                 self.bc_const[dof_r] = False
                 self.bc_force[dof_r] = False
 
@@ -410,8 +410,7 @@ class BicycleWheelFEM:
         'Solve elasticity equations for nodal displacements.'
 
         # Form augmented, reduced stiffness matrix
-        if self.k_global is None:
-            self.calc_stiff_mat()
+        self.calc_stiff_mat()
 
         if len(self.rigid) == 0:
             # No rigid bodies. Reduced node IDs are equal to node IDs
@@ -484,8 +483,6 @@ class BicycleWheelFEM:
         self.geom = geom
         self.rim_sec = rim_sec
         self.spoke_sec = spoke_sec
-
-        print(geom.a_rim_nodes)
 
         # Rim nodes
         self.x_nodes = geom.d_rim/2 * np.sin(geom.a_rim_nodes)
