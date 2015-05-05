@@ -25,27 +25,79 @@ r_sec = RimSection(area=82.0e-6,      # cross-sectional area
 s_sec = SpokeSection(2.0e-3,  # spoke diameter
                      210e9)   # Young's modulus - steel
 
+# Rotational stiffness is the ratio of applied torque to hub twist in degrees.
+# This can be calculated by twisting the hub a fixed amount and measuring the
+# torque. Alternatively, one could apply a fixed torque and measure the degree
+# of hub twist.
+stiff_rot = []  # Units: [N-m / degree]
 
-stiff_windup = []
+# Lateral stiffness is the ratio of a force applied to the rim parallel to
+# the axle, to the resulting displacement. The hub is rigidly clamped.
+stiff_lat = []  # Units: [N/m]
+
+# Radial stiffness is the ratio of a radial force applied to the rim, to the
+# resulting displacement. The hub is rigidly clamped.
+stiff_rad = []  # Units: [N/m]
+
 
 for g in geom:
 
     fem = BicycleWheelFEM(g, r_sec, s_sec)
 
-    # Rigid body to constrain hub nodes
+    # Create a rigid body to constrain the hub nodes
     r_hub = RigidBody('hub', [0, 0, 0], fem.get_hub_nodes())
-    r_rim = RigidBody('rim', [0, 0, 0], fem.get_rim_nodes())
     fem.add_rigid_body(r_hub)
+
+    # Calculate radial stiffness. Apply an upward force to the bottom node
+    fem.add_constraint(r_hub.node_id, range(6))
+    fem.add_force(0, 1, 1)
+
+    soln = fem.solve()
+    stiff_rad.append(1.0 / np.abs(soln.nodal_disp[1]))
+
+    # Remove forces and boundary conditions
+    fem.remove_bc(range(fem.n_nodes), range(6))
+
+
+    # Calculate lateral stiffness. Apply a sideways force to the bottom node
+    fem.add_constraint(r_hub.node_id, range(6))
+    fem.add_force(0, 2, 1)
+
+    soln = fem.solve()
+    stiff_lat.append(1.0 / np.abs(soln.nodal_disp[2]))
+
+    # Remove forces and boundary conditions
+    fem.remove_bc(range(fem.n_nodes), range(6))
+
+
+    # Calculate rotational stiffness. Fix both hub and rim and rotate the hub
+    r_rim = RigidBody('rim', [0, 0, 0], fem.get_rim_nodes())
     fem.add_rigid_body(r_rim)
+
+    print(fem.C.shape)
+    print(fem.B.shape)
 
     fem.add_constraint(r_rim.node_id, range(6))   # fix rim
     fem.add_constraint(r_hub.node_id, [2, 3, 4])  # fix hub z, roll, and yaw
 
     fem.add_constraint(r_hub.node_id, 5, np.pi/180)  # rotate by 1 degree
 
-    soln = fem.solve()
+    soln = fem.solve() 
+    stiff_rot.append(soln.nodal_rxn[9])
 
-    i_rxn = 9  # index of reaction torque on rim
-    stiff_windup.append(soln.nodal_rxn[i_rxn])
+for s, r, l in zip(stiff_rot, stiff_rad, stiff_lat):
+    print('{:5.1f} {:5.1f} {:5.1f}'.format(s, r, l))
 
-print(stiff_windup)
+# Create a bar graph showing the wind-up stiffnesses
+pp.bar(range(len(stiff_rot)), stiff_rot)
+pp.ylabel('Rotational stiffness [N-m / degree]')
+
+pp.figure()
+pp.bar(range(len(stiff_rad)), stiff_rad)
+pp.ylabel('Radial stiffness [N-m]')
+
+pp.figure()
+pp.bar(range(len(stiff_lat)), stiff_lat)
+pp.ylabel('Lateral stiffness [N-m]')
+
+pp.show()
