@@ -227,7 +227,7 @@ class BicycleWheelFEM:
         Tg[3::, 3] = e1.reshape((3, 1))
 
         k_spoke = np.matrix(np.zeros((6, 6)))
-        k_spoke[::3, ::3] = sec.area*sec.young_mod/l * np.matrix([[1, -1],[-1, 1]])
+        k_spoke[::3, ::3] = sec.area*sec.young_mod/l * np.matrix([[1, -1], [-1, 1]])
 
         k_spoke = Tg * k_spoke * Tg.T
 
@@ -272,14 +272,8 @@ class BicycleWheelFEM:
         self.k_global = self.k_rim + self.k_spokes
 
     def add_rigid_body(self, rigid_body):
-        'Constrain nodes to move together as a rigid body.'
 
-        # Convert stiffness equation into reduced equation
-        #   U  = C * U_reduced
-        #   F_reduced = B * F
-        #   F_reduced = (B * K * C) * U_reduced
-
-        # Check that the constrained nodes are not already assigned to rigid bodies
+        # Check that nodes are not already assigned to rigid bodies
         for rig in self.rigid:
             in_rig = [i in rig.nodes for i in rigid_body.nodes]
             if any(in_rig):
@@ -303,6 +297,23 @@ class BicycleWheelFEM:
 
         print('# Adding new rigid body: {:s}'.format(rigid_body.name))
         print('# -- Reference node {:d}\n'.format(rigid_body.node_id))
+
+        # Recalculate reduction matrices
+        self.calc_reduction_matrices()
+
+    def calc_reduction_matrices(self):
+        'Calculates matrices which encode rigid body constraints'
+
+        # Convert stiffness equation into reduced equation
+        #   U  = C * U_reduced
+        #   F_reduced = B * F
+        #   F_reduced = (B * K * C) * U_reduced
+
+        if not self.rigid:  # if there are no rigid bodies
+            self.B = 1
+            self.C = 1
+            self.node_r_id = range(self.n_nodes)
+            return
 
         # Re-calculate B and C matrices
         n_c = np.sum([r.n_nodes for r in self.rigid])
@@ -343,8 +354,38 @@ class BicycleWheelFEM:
         self.soln_updated = False
 
     def remove_rigid_body(self, rigid_body):
-        # TODO
-        pass
+        'Remove a rigid body constraint'
+
+        # Confirm that the rigid body belongs to this model
+        if rigid_body not in self.rigid:
+            print('*** This rigid body does not exist in this model.')
+            return
+
+        # Remove from rigid bodies list
+        self.rigid.remove(rigid_body)
+
+        # Delete the reference node
+        n = rigid_body.node_id
+        self.n_nodes -= 1
+        self.x_nodes = np.delete(self.x_nodes, n)
+        self.y_nodes = np.delete(self.y_nodes, n)
+        self.z_nodes = np.delete(self.z_nodes, n)
+        self.bc_u = np.delete(self.bc_u, 6*n + np.arange(6))
+        self.bc_f = np.delete(self.bc_f, 6*n + np.arange(6))
+        for _ in range(6):
+            self.bc_const.pop(n)
+            self.bc_force.pop(n)
+
+        # Shift the node id for any subsequent rigid bodies down
+        for r in self.rigid:
+            if r.node_id > n:
+                r.node_id -= 1
+
+        # Unset reference node
+        rigid_body.node_id = None
+
+        # Recalculate reduction matrices
+        self.calc_reduction_matrices()
 
     def add_constraint(self, node_id, dof, u=0):
         'Add a displacement constraint (Dirichlet boundary condition).'
