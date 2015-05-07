@@ -8,5 +8,5 @@ class RimSection:
         self.I33 = I33
         self.young_mod = young_mod
         self.shear_mod = shear_mod
-        self.K2 = K2
-        self.K3 = K3
+        self.K2 = K2  # transverse shear constant
+        self.K3 = K3  # transverse shear constant
