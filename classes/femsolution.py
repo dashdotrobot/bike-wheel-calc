@@ -69,8 +69,6 @@ class FEMSolution:
 
         rim_nodes = np.where(self.type_nodes == N_RIM)[0]
 
-        print len(rim_nodes)
-
         u_rad, u_tan = self.get_polar_displacements(rim_nodes)
 
         # Scale the largest displacement to a percentage of the rim radius
