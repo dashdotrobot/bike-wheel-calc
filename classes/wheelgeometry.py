@@ -211,10 +211,11 @@ class WheelGeometry:
             print('*** Not enough hub eyelets or spoke nipples have been defined.')
 
     def remove_spoke(self, hub_eyelet, rim_nipple):
-        # TODO
         for s in range(len(self.lace_hub_n)):
             if self.lace_hub_n[s] == hub_eyelet and self.lace_rim_n[s] == rim_nipple:
-                print s
+                self.lace_hub_n = np.delete(self.lace_hub_n, s)
+                self.lace_rim_n = np.delete(self.lace_rim_n, s)
+                return
 
     def __init__(self, wheel_file=None, n_vec=np.array([0, 0, 1])):
 
