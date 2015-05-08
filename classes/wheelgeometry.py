@@ -203,6 +203,19 @@ class WheelGeometry:
             print('')
             raise
 
+    def add_spoke(self, hub_eyelet, rim_nipple):
+        if hub_eyelet <= self.n_hub_nodes and rim_nipple <= self.n_rim_nodes:
+            self.lace_hub_n = np.append(self.lace_hub_n, hub_eyelet)
+            self.lace_rim_n = np.append(self.lace_rim_n, rim_nipple)
+        else:
+            print('*** Not enough hub eyelets or spoke nipples have been defined.')
+
+    def remove_spoke(self, hub_eyelet, rim_nipple):
+        # TODO
+        for s in range(len(self.lace_hub_n)):
+            if self.lace_hub_n[s] == hub_eyelet and self.lace_rim_n[s] == rim_nipple:
+                print s
+
     def __init__(self, wheel_file=None, n_vec=np.array([0, 0, 1])):
 
         print('# Initializing wheel geometry -----------')

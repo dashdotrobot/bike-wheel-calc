@@ -17,6 +17,9 @@ from helpers import *
 
 EL_RIM = 1
 EL_SPOKE = 2
+N_RIM = 1
+N_HUB = 2
+N_REF = 3
 TWOPI = 2*np.pi
 
 
@@ -31,11 +34,14 @@ class BicycleWheelFEM:
 
     def get_rim_nodes(self):
         'Return node IDs of all nodes on the rim.'
-        return np.arange(self.geom.n_rim_nodes)
+        # return np.arange(self.geom.n_rim_nodes)
+        return np.where(self.type_nodes == N_RIM)[0]
+
 
     def get_hub_nodes(self):
         'Return node IDs of all nodes on the hub.'
-        return np.arange(self.geom.n_hub_nodes) + self.geom.n_rim_nodes
+        # return np.arange(self.geom.n_hub_nodes) + self.geom.n_rim_nodes
+        return np.where(self.type_nodes == N_HUB)[0]
 
     def get_spoke_tension(self, u):
         'Calculate tension in all spokes.'
@@ -290,6 +296,7 @@ class BicycleWheelFEM:
         self.x_nodes = np.append(self.x_nodes, rigid_body.pos[0])
         self.y_nodes = np.append(self.y_nodes, rigid_body.pos[1])
         self.z_nodes = np.append(self.z_nodes, rigid_body.pos[2])
+        self.type_nodes = np.append(self.type_nodes, N_REF)
         self.bc_const.extend(6*[False])
         self.bc_force.extend(6*[False])
         self.bc_u = np.append(self.bc_u, 6*[0])
@@ -370,6 +377,7 @@ class BicycleWheelFEM:
         self.x_nodes = np.delete(self.x_nodes, n)
         self.y_nodes = np.delete(self.y_nodes, n)
         self.z_nodes = np.delete(self.z_nodes, n)
+        self.type_nodes = np.delete(self.type_nodes, n)
         self.bc_u = np.delete(self.bc_u, 6*n + np.arange(6))
         self.bc_f = np.delete(self.bc_f, 6*n + np.arange(6))
         for _ in range(6):
@@ -529,6 +537,7 @@ class BicycleWheelFEM:
         self.x_nodes = geom.d_rim/2 * np.sin(geom.a_rim_nodes)
         self.y_nodes = -geom.d_rim/2 * np.cos(geom.a_rim_nodes)
         self.z_nodes = np.zeros(len(self.x_nodes))
+        self.type_nodes = N_RIM * np.ones(len(self.x_nodes))
 
         # Hub nodes
         diam_hub = np.array([geom.d1_hub*(geom.s_hub_nodes[i] < 0) +
@@ -542,18 +551,20 @@ class BicycleWheelFEM:
         self.x_nodes = np.append(self.x_nodes,  diam_hub/2 * np.sin(geom.a_hub_nodes))
         self.y_nodes = np.append(self.y_nodes, -diam_hub/2 * np.cos(geom.a_hub_nodes))
         self.z_nodes = np.append(self.z_nodes, width_hub)
+        self.type_nodes = np.append(self.type_nodes, N_HUB * np.ones(len(geom.a_hub_nodes)))
 
         self.n_nodes = len(self.x_nodes)
 
         # rim elements connectivity
         self.el_n1 = np.array(range(geom.n_rim_nodes))
         self.el_n2 = np.array(range(1, geom.n_rim_nodes) + [0])
+        self.el_type = EL_RIM * np.ones(geom.n_rim_nodes)
 
         # spoke elements connectivity
         self.el_n1 = np.concatenate((self.el_n1, geom.lace_hub_n - 1 + geom.n_rim_nodes))
         self.el_n2 = np.concatenate((self.el_n2, geom.lace_rim_n - 1))
 
-        self.el_type = np.array([EL_RIM]*geom.n_spokes)
+
         self.el_type = np.concatenate((self.el_type, EL_SPOKE*np.ones(len(geom.lace_hub_n))))
 
         # rigid bodies

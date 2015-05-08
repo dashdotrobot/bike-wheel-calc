@@ -4,6 +4,12 @@ import copy
 from scipy import interpolate
 from helpers import *
 
+EL_RIM = 1
+EL_SPOKE = 2
+N_RIM = 1
+N_HUB = 2
+N_REF = 3
+
 class FEMSolution:
     el_rim = 1
     el_spoke = 2
@@ -61,7 +67,9 @@ class FEMSolution:
 
     def plot_deformed_wheel(self, scale_rad=0.1, scale_tan=0.0):
 
-        rim_nodes = [self.el_n1[e] for e in range(len(self.el_type)) if self.el_type[e] == self.el_rim]
+        rim_nodes = np.where(self.type_nodes == N_RIM)[0]
+
+        print len(rim_nodes)
 
         u_rad, u_tan = self.get_polar_displacements(rim_nodes)
 
@@ -91,7 +99,8 @@ class FEMSolution:
         pp.plot(r_def_ii * np.cos(theta_def_ii), r_def_ii * np.sin(theta_def_ii), 'k', linewidth=2.0)
 
         # Plot spokes in deformed configuration
-        for e in [x for x in range(len(self.el_type)) if self.el_type[x] == self.el_spoke]:
+        # for e in [x for x in range(len(self.el_type)) if self.el_type[x] == self.el_spoke]:
+        for e in np.where(self.el_type == EL_SPOKE)[0]:
             n_hub = self.el_n1[e]
             n_rim = self.el_n2[e]
 
@@ -120,6 +129,7 @@ class FEMSolution:
         self.x_nodes = fem.x_nodes.copy()
         self.y_nodes = fem.y_nodes.copy()
         self.z_nodes = fem.z_nodes.copy()
+        self.type_nodes = fem.type_nodes.copy()
 
         self.el_type = fem.el_type.copy()
         self.el_n1 = fem.el_n1.copy()
