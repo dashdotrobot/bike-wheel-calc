@@ -19,7 +19,8 @@ class WheelGeometry:
                                                          ns=len(self.lace_hub_n))
 
     def sort_spokes(self):
-        # Sort spokes by rim node
+        'Sort spokes by rim node'
+        
         self.lace_hub_n = self.lace_hub_n[self.lace_rim_n.argsort()]
         self.lace_rim_n.sort()
 
@@ -223,9 +224,23 @@ class WheelGeometry:
             raise
 
     def add_spoke(self, hub_eyelet, rim_nipple):
-        if hub_eyelet <= self.n_hub_nodes and rim_nipple <= self.n_rim_nodes:
-            self.lace_hub_n = np.append(self.lace_hub_n, hub_eyelet)
-            self.lace_rim_n = np.append(self.lace_rim_n, rim_nipple)
+        """Add a spoke connecting hub_eyelet and rim_nipple. Inputs can be
+           integers, or lists of equal length"""
+
+        # Allow array input for eyelets or nipples
+        if not hasattr(hub_eyelet, '__iter__'):
+            hub_eyelet = [hub_eyelet]
+        if not hasattr(rim_nipple, '__iter__'):
+            rim_nipple = [rim_nipple]
+
+        # Make sure there are enough eyelets and nipples
+        cond1 = np.max(hub_eyelet) <= self.n_hub_nodes
+        cond2 = np.max(rim_nipple) <= self.n_rim_nodes
+
+        if cond1 and cond2:
+            for h, r in zip(hub_eyelet, rim_nipple):
+                self.lace_hub_n = np.append(self.lace_hub_n, h)
+                self.lace_rim_n = np.append(self.lace_rim_n, r)
         else:
             print('*** Not enough hub eyelets or spoke nipples have been defined.')
 
