@@ -239,10 +239,15 @@ class WheelGeometry:
                 return
 
     def __init__(self, wheel_file=None, rim_diam=0.6,
-                 hub_diam=0.04, hub_diam_drive=0.04, hub_width=0.035, hub_width_drive=0.035):
+                 hub_diam=0.04, hub_diam_drive=None, hub_width=0.035, hub_width_drive=None):
 
         # axial vector from hub center to drive side nut
         self.n_vec = np.array([0, 0, 1])
+
+        if hub_diam_drive is None:
+            hub_diam_drive = hub_diam
+        if hub_width_drive is None:
+            hub_width_drive = hub_width
 
         self.d_rim = rim_diam
         self.d1_hub = hub_diam
