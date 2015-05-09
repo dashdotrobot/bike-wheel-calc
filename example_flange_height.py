@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from classes.bikewheelfem import *
-from classes.wheelgeometry import WheelGeometry
 import matplotlib.pyplot as pp
 
 
