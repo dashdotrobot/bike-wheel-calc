@@ -4,6 +4,20 @@ import re
 class WheelGeometry:
     'Geometric parameters including size and lacing pattern'
 
+    def __str__(self):
+        return ("Bicycle wheel geometry object\n"
+                "  rim diameter        :{rd:6.1f} mm\n"
+                "  hub diameter        :{hd1:6.1f} mm\n"
+                "  hub diameter (drive):{hd2:6.1f} mm\n"
+                "  hub width           :{hw1:6.1f} mm\n"
+                "  hub width (drive)   :{hw2:6.1f} mm\n"
+                "  number of spokes    :{ns:6d}\n").format(rd=self.d_rim*1000,
+                                                         hd1=self.d1_hub*1000,
+                                                         hd2=self.d2_hub*1000,
+                                                         hw1=self.w1_hub*1000,
+                                                         hw2=self.w2_hub*1000,
+                                                         ns=len(self.lace_hub_n))
+
     def sort_spokes(self):
         # Sort spokes by rim node
         self.lace_hub_n = self.lace_hub_n[self.lace_rim_n.argsort()]
