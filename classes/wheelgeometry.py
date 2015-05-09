@@ -4,6 +4,11 @@ import re
 class WheelGeometry:
     'Geometric parameters including size and lacing pattern'
 
+    def sort_spokes(self):
+        # Sort spokes by rim node
+        self.lace_hub_n = self.lace_hub_n[self.lace_rim_n.argsort()]
+        self.lace_rim_n.sort()
+
     def parse_wheel_file(self, fname):
 
         def keyword_rim(l, f):
@@ -210,6 +215,8 @@ class WheelGeometry:
         else:
             print('*** Not enough hub eyelets or spoke nipples have been defined.')
 
+        self.sort_spokes()
+
     def remove_spoke(self, hub_eyelet, rim_nipple):
         for s in range(len(self.lace_hub_n)):
             if self.lace_hub_n[s] == hub_eyelet and self.lace_rim_n[s] == rim_nipple:
@@ -225,3 +232,4 @@ class WheelGeometry:
 
         if wheel_file is not None:
             self.parse_wheel_file(wheel_file)
+            self.sort_spokes()
