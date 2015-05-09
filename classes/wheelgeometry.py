@@ -224,11 +224,17 @@ class WheelGeometry:
                 self.lace_rim_n = np.delete(self.lace_rim_n, s)
                 return
 
-    def __init__(self, wheel_file=None, n_vec=np.array([0, 0, 1])):
+    def __init__(self, wheel_file=None, rim_diam=0.6,
+                 hub_diam=0.04, hub_diam_drive=0.04, hub_width=0.035, hub_width_drive=0.035):
 
-        print('# Initializing wheel geometry -----------')
+        # axial vector from hub center to drive side nut
+        self.n_vec = np.array([0, 0, 1])
 
-        self.n_vec = n_vec  # axial vector from hub center to drive side nut
+        self.d_rim = rim_diam
+        self.d1_hub = hub_diam
+        self.d2_hub = hub_diam_drive
+        self.w1_hub = hub_width
+        self.w2_hub = hub_width_drive
 
         if wheel_file is not None:
             self.parse_wheel_file(wheel_file)
