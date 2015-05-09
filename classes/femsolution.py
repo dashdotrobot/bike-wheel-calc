@@ -14,6 +14,25 @@ class FEMSolution:
     el_rim = 1
     el_spoke = 2
 
+    def get_nodal_displacements(self, node_id=None):
+        """Returns an (N x 6) array of nodal displacements where N is the
+        number of nodes with 6 degrees of freedom each."""
+        
+        if node_id is None:
+            node_id = np.arange(len(self.x_nodes))
+        else:
+            if not hasattr(node_id, '__iter__'):
+                node_id = np.array([node_id])
+            else:
+                node_id = np.array(node_id)
+
+        disp_array = np.zeros((len(node_id), 6))
+
+        for d in range(6):
+            disp_array[:,d] = self.nodal_disp[6*node_id + d]
+
+        return disp_array
+
     def get_polar_displacements(self, node_id):
         'Convert nodal displacements to polar form'
 
@@ -97,7 +116,6 @@ class FEMSolution:
         pp.plot(r_def_ii * np.cos(theta_def_ii), r_def_ii * np.sin(theta_def_ii), 'k', linewidth=2.0)
 
         # Plot spokes in deformed configuration
-        # for e in [x for x in range(len(self.el_type)) if self.el_type[x] == self.el_spoke]:
         for e in np.where(self.el_type == EL_SPOKE)[0]:
             n_hub = self.el_n1[e]
             n_rim = self.el_n2[e]

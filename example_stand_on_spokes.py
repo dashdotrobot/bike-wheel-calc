@@ -7,7 +7,6 @@ import matplotlib.pyplot as pp
 
 # Initialize wheel geometry from wheel files
 geom_36x3 = WheelGeometry(wheel_file='wheel_36_x3.txt')
-geom_crow = WheelGeometry(wheel_file='wheel_36_crowsfoot.txt')
 
 # Rim section and material properties
 r_sec = RimSection(area=82.0e-6,      # cross-sectional area
@@ -53,34 +52,5 @@ pp.xlabel('spoke number')
 pp.ylabel('change in spoke tension [Newtons]')
 pp.savefig('spoke_t_36x3.png')
 
-
-# --- 36-spoke crows-foot lacing -----------------------------
-fem = BicycleWheelFEM(geom_crow, r_sec, s_sec)
-
-R1 = RigidBody('hub', [0, 0, 0], fem.get_hub_nodes())
-fem.add_rigid_body(R1)
-fem.add_constraint(R1.node_id, range(6))
-
-fem.add_force(0, 1, 500)
-fem.add_force(1, 1, 250)
-fem.add_force(35, 1, 250)
-
-soln = fem.solve()
-
-# Draw deformed wheel
-f3 = pp.figure(3)
-f_def = soln.plot_deformed_wheel(scale_rad=0.05)
-pp.axis('off')
-pp.savefig('def_crow.png')
-
-# Plot spoke tension
-f4 = pp.figure(4)
-
-# Move bars so loaded spokes appear in center
-ind_shift = (np.arange(len(soln.spokes_t)) + 18) % 36
-pp.bar(range(len(soln.spokes_t)), soln.spokes_t[ind_shift])
-pp.xlabel('spoke number')
-pp.ylabel('change in spoke tension [Newtons]')
-pp.savefig('spoke_t_crow.png')
 
 pp.show()

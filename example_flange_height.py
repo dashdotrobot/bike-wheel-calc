@@ -44,18 +44,16 @@ for d in diam_flange:
     fem.add_constraint(r_hub.node_id, 5, np.pi/180)  # rotate by 1 degree
 
     soln = fem.solve()
-    print(soln.nodal_rxn)
-    print(soln.dof_rxn)
 
-    i_rxn = 9  # index of reaction torque on rim
+    rot_stiff.append(soln.nodal_rxn[r_rim.node_id, 5])
 
-    rot_stiff.append(soln.nodal_rxn[i_rxn])
-
-    pp.plot(d*100, soln.nodal_rxn[i_rxn], 'ro')
-
+pp.plot(diam_flange * 100, rot_stiff, 'ro')
 pp.xlabel('flange diameter [cm]')
 pp.ylabel('wind-up stiffness [N-m / degree]')
 
-pp.show()
+print 'flange diam [cm] | rotational stiffness [N-m/degree]'
+print '----------------------------------------------------'
+for d, r in zip(diam_flange, rot_stiff):
+    print '{0:11.1f}      | {1:4.3e}'.format(d*100, r)
 
-print(rot_stiff)
+pp.show()

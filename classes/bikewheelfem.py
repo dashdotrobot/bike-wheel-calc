@@ -506,23 +506,28 @@ class BicycleWheelFEM:
 
         # nodal displacements
         if self.rigid:
-            soln.nodal_disp = np.array(self.C.dot(u_red)).flatten()
+            u = np.array(self.C.dot(u_red)).flatten()
         else:
-            soln.nodal_disp = u_red.flatten()
+            u = u_red.flatten()
+
+        soln.nodal_disp = np.zeros((self.n_nodes, 6))
+        for d in range(6):
+            soln.nodal_disp[:,d] = u[d::6]
 
         # nodal reaction forces
         rxn_red = np.array(k_red.dot(u_red) - f_aug).flatten()
         dof_rxn_red = [6*self.node_r_id[i/6] + i % 6 for i in range(6*self.n_nodes) if self.bc_const[i]]
-        dof_rxn = [i for i in range(6*self.n_nodes) if self.bc_const[i]]
-        soln.nodal_rxn = rxn_red[dof_rxn_red]
+        dof_rxn = np.where(self.bc_const)[0]
+        rxn = rxn_red[dof_rxn_red]
 
-        soln.dof_rxn = dof_rxn
+        soln.nodal_rxn = np.zeros((self.n_nodes, 6))
+        soln.nodal_rxn[dof_rxn / 6, dof_rxn % 6] = rxn
 
         # spoke tension
-        soln.spokes_t = self.get_spoke_tension(soln.nodal_disp)
+        soln.spokes_t = self.get_spoke_tension(u)
 
         soln.rim_t, soln.rim_v_i, soln.rim_v_o, soln.rim_m_t, soln.rim_m_w, soln.rim_m_s = \
-            self.get_rim_stresses(soln.nodal_disp)
+            self.get_rim_stresses(u)
 
         print('# ---------------------------------------')
 

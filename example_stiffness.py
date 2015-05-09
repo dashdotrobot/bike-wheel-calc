@@ -53,7 +53,7 @@ for g in geom:
     fem.add_force(0, 1, 1)
 
     soln = fem.solve()
-    stiff_rad.append(1.0 / np.abs(soln.nodal_disp[1]))
+    stiff_rad.append(1.0 / np.abs(soln.nodal_disp[0, 1]))
 
     # Remove forces and boundary conditions
     fem.remove_bc(range(fem.n_nodes), range(6))
@@ -64,7 +64,7 @@ for g in geom:
     fem.add_force(0, 2, 1)
 
     soln = fem.solve()
-    stiff_lat.append(1.0 / np.abs(soln.nodal_disp[2]))
+    stiff_lat.append(1.0 / np.abs(soln.nodal_disp[0, 2]))
 
     # Remove forces and boundary conditions
     fem.remove_bc(range(fem.n_nodes), range(6))
@@ -74,21 +74,22 @@ for g in geom:
     r_rim = RigidBody('rim', [0, 0, 0], fem.get_rim_nodes())
     fem.add_rigid_body(r_rim)
 
-    print(fem.C.shape)
-    print(fem.B.shape)
-
     fem.add_constraint(r_rim.node_id, range(6))   # fix rim
     fem.add_constraint(r_hub.node_id, [2, 3, 4])  # fix hub z, roll, and yaw
 
     fem.add_constraint(r_hub.node_id, 5, np.pi/180)  # rotate by 1 degree
 
     soln = fem.solve() 
-    stiff_rot.append(soln.nodal_rxn[9])
+    stiff_rot.append(soln.nodal_rxn[r_rim.node_id, 5])
 
-for s, r, l in zip(stiff_rot, stiff_rad, stiff_lat):
-    print('{:5.1f} {:5.1f} {:5.1f}'.format(s, r, l))
+# Print a table of stiffnesses
+print '\n\n'
+print 'wheel | rotational [N-m/degree] | radial [N/m] | lateral [N/m]'
+print '--------------------------------------------------------------'
+for i in range(len(geom)):
+    print '  {i:2d}          {r:5.3e}             {d:5.3e}      {l:4.3e}'.format(i=i, r=stiff_rot[i], d=stiff_rad[i], l=stiff_lat[i])
 
-# Create a bar graph showing the wind-up stiffnesses
+# Create bar graphs of stiffnesses
 pp.bar(range(len(stiff_rot)), stiff_rot)
 pp.ylabel('Rotational stiffness [N-m / degree]')
 
@@ -99,5 +100,6 @@ pp.ylabel('Radial stiffness [N-m]')
 pp.figure()
 pp.bar(range(len(stiff_lat)), stiff_lat)
 pp.ylabel('Lateral stiffness [N-m]')
+
 
 pp.show()
