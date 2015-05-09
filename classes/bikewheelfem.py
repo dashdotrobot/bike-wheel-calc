@@ -523,7 +523,7 @@ class BicycleWheelFEM:
         soln.nodal_rxn = np.zeros((self.n_nodes, 6))
         soln.nodal_rxn[dof_rxn / 6, dof_rxn % 6] = rxn
 
-        # spoke tension
+        # spoke tension and rim stresses
         soln.spokes_t = self.get_spoke_tension(u)
 
         soln.rim_t, soln.rim_v_i, soln.rim_v_o, soln.rim_m_t, soln.rim_m_w, soln.rim_m_s = \

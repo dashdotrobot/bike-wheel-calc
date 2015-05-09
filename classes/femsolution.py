@@ -14,25 +14,6 @@ class FEMSolution:
     el_rim = 1
     el_spoke = 2
 
-    def get_nodal_displacements(self, node_id=None):
-        """Returns an (N x 6) array of nodal displacements where N is the
-        number of nodes with 6 degrees of freedom each."""
-        
-        if node_id is None:
-            node_id = np.arange(len(self.x_nodes))
-        else:
-            if not hasattr(node_id, '__iter__'):
-                node_id = np.array([node_id])
-            else:
-                node_id = np.array(node_id)
-
-        disp_array = np.zeros((len(node_id), 6))
-
-        for d in range(6):
-            disp_array[:,d] = self.nodal_disp[6*node_id + d]
-
-        return disp_array
-
     def get_polar_displacements(self, node_id):
         'Convert nodal displacements to polar form'
 
@@ -48,7 +29,7 @@ class FEMSolution:
             x = np.array([self.x_nodes[n], self.y_nodes[n], self.z_nodes[n]])
             n_tan = np.cross(np.array([0,0,1]),x)
 
-            u_rim = self.nodal_disp[6*n + np.arange(3)]
+            u_rim = self.nodal_disp[n, 0:3]
 
             u_rad = np.append(u_rad, u_rim.dot(x) / np.sqrt(x.dot(x)))
             u_tan = np.append(u_tan, u_rim.dot(n_tan) / np.sqrt(n_tan.dot(n_tan)))
@@ -152,9 +133,9 @@ class FEMSolution:
         self.el_n2 = fem.el_n2.copy()
 
         # nodal displacements and reation forces
-        self.nodal_disp = []
-        self.nodal_rxn = []
-        self.dof_rxn = []
+        self.nodal_disp = None
+        self.nodal_rxn = None
+        self.dof_rxn = None
 
         # internal forces at each node
         self.spokes_t = []  # spoke tension
