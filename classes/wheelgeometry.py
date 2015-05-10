@@ -20,7 +20,7 @@ class WheelGeometry:
 
     def sort_spokes(self):
         'Sort spokes by rim node'
-        
+
         self.lace_hub_n = self.lace_hub_n[self.lace_rim_n.argsort()]
         self.lace_rim_n.sort()
 
@@ -99,12 +99,12 @@ class WheelGeometry:
 
             self.d1_hub = float(args['diam'])
             self.d2_hub = self.d1_hub
-            if args['diam_drive'] != None:
+            if args['diam_drive'] is not None:
                 self.d2_hub = float(args['diam_drive'])
 
             self.w1_hub = float(args['width'])
             self.w2_hub = self.w1_hub
-            if args['width_drive'] != None:
+            if args['width_drive'] is not None:
                 self.w2_hub = float(args['width_drive'])
 
             N = int(args['N'])
@@ -253,6 +253,30 @@ class WheelGeometry:
                 self.lace_rim_n = np.delete(self.lace_rim_n, s)
                 return
 
+    def add_nipple(self, angle):
+
+        if not hasattr(angle, '__iter__'):
+            angle = [angle]
+
+        angle = np.array(angle) * np.pi / 180
+
+        self.a_rim_nodes = np.concatenate((self.a_rim_nodes, angle))
+        self.n_rim_nodes = len(self.a_rim_nodes)
+
+    def add_eyelet(self, angle, side):
+
+        if not hasattr(angle, '__iter__'):
+            angle = [angle]
+        if not hasattr(side, '__iter__'):
+            side = [side]
+
+        angle = np.array(angle) * np.pi / 180
+
+        self.a_hub_nodes = np.concatenate((self.a_hub_nodes, angle))
+        self.s_hub_nodes = np.concatenate((self.s_hub_nodes, side))
+
+        self.n_hub_nodes = len(self.a_hub_nodes)
+
     def __init__(self, wheel_file=None, n_spokes=None, rim_diam=0.6,
                  hub_diam=0.04, hub_diam_drive=None, hub_width=0.035, hub_width_drive=None):
 
@@ -261,11 +285,19 @@ class WheelGeometry:
 
         if not n_spokes is None:
             # Create equally spaced hub eyelets and spoke nipples
-            self.a_rim_nodes = np.linspace(0, 2*np.pi * (n_spokes-1)/n_spokes, n_spokes)
+            self.a_rim_nodes = np.linspace(0, 2*np.pi * (n_spokes-1)/n_spokes, n_spokes
+                )
             self.a_hub_nodes = np.linspace(0, 2*np.pi * (n_spokes-1)/n_spokes, n_spokes)
             self.s_hub_nodes = np.zeros(n_spokes, dtype=np.int8)
             self.s_hub_nodes[::2] = 1    # Drive-side nodes
             self.s_hub_nodes[1::2] = -1  # Left-side nodes
+        else:
+            self.a_rim_nodes = np.array([], dtype=np.float)
+            self.a_hub_nodes = np.array([], dtype=np.float)
+            self.s_hub_nodes = np.array([], dtype=np.int8)
+
+        self.lace_hub_n = np.array([], dtype=np.int32)
+        self.lace_rim_n = np.array([], dtype=np.int32)
 
         if hub_diam_drive is None:
             hub_diam_drive = hub_diam
