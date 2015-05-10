@@ -38,7 +38,7 @@ as where you write python scripts.
 
 To perform a typical computation, you should (1) define the wheel geometry, (2) define the spoke and rim material properties, (3) add constraints ("clamp" or "fix" the wheel at some points), (4) add forces or torques, and finally, (5) solve!
 
-### 1 Defining wheel geometry
+### 1 Defining wheel geometry and material properties
 
 A WheelGeometry object defines the geometry of a bicycle wheel including rim diameter, hub diameter (drive-side and non-drive-side), hub width (drive-side and non-drive-side), and spoke connections.
 
@@ -58,7 +58,9 @@ geom.add_spoke(9, 3)
 ...
 ```
 
-Diameters should be specified in meters. If the `n_spokes` parameter is omitted and a wheel file is not provided, the locations of the hub eyelets and spoke nipples must be defined manually.
+Diameters should be specified in meters. The `add_spoke(i, j)` command adds a spoke connecting the <i>th hub eyelet (a number between 1 and the number of hub eyelets) to the <j>th spoke nipple (a number between 1 and the number of spoke nipples). These are **not** the node IDs of these points.
+
+If the `n_spokes` parameter is omitted and a wheel file is not provided, the locations of the hub eyelets and spoke nipples must be defined manually.
 
 ```python
 geom = WheelGeometry(rim_diam=0.6, hub_diam=0.04, hub_width=0.035)
@@ -67,8 +69,6 @@ geom.add_eyelet([0, 10, 20, 30, ...], [1, -1, 1, -1, ...])
 ```
 
 The first argument is a list of the angular positions (starting from 0 degrees = bottom center), while the second argument to `add_eyelet()` is a list of the same length specifying the side (1 = drive side, -1 = non-drive side).
-
-### 2 Define spoke and rim material properties
 
 The SpokeSection object defines the spoke diameter and the spoke material [Young's Modulus](http://en.wikipedia.org/wiki/Young%27s_modulus).
 
@@ -89,20 +89,68 @@ rim_section = RimSection(area=82.0e-6,      # cross-sectional area
 
 The [area moment of inertia](http://en.wikipedia.org/wiki/Second_moment_of_area) is a geometric property of the cross-section. It is easy to calculate for simple geometric shapes (circles, boxes, etc) but can be quite complicated for generic hollow sections, like most bicycle rims. The quantity `I22` is actually the [polar moment of inertia](http://en.wikipedia.org/wiki/Polar_moment_of_inertia), which is related to the twisting of the rim. Rim twist probably plays a smaller role in wheel deformation under most circumstances, and it may be safe to simply choose a large value (larger than `I22` or `I33`) for simple in-plane problems like rider weight, acceleration, or braking loads.
 
+### 2 Create BicycleWheelFEM object (finite-element solver)
+
+The BicycleWheelFEM object represents the model that you are solving, including the nodes (points) and elements (spokes and rim segments), and the constraints and forces (boundary conditions).
+
+```python
+fem = BicycleWheelFEM(geom=geom, rim_sec=rim_section, spoke_sec = spoke_section)
+```
+
 ### 3 Add constraints
 
+By default, the hub nodes aren't connected to anything, so before applying forces, you should probably attach them all together. Do this by defining a `RigidBody` object which contains all the hub nodes. The reason this isn't done by default is to allow you to simulate more complicated effects, like the torsional flexibility of the hub in transferring torque from the sprocket side to the left side).
 
+```python
+R_hub = RigidBody(name='hub', pos=[0, 0, 0], nodes=fem.get_hub_nodes())
+fem.add_rigid_body(R_hub)
+```
+
+You could also choose the nodes to constrain manually by entering a list of nodes IDs, e.g. `R_hub = RigidBody('name', pos=[0, 0, 0], nodes=[12, 13, 14, 22, 25, ...])`. The rigid body contains a special reference node at the position `pos` which you will use to add constraints or forces to the rigid body.
+
+Before you apply forces to the wheel, you need to add constraints to specify how it is held (you can't stretch a spring without holding the other side fixed).
+
+> **Degrees of Freedom.** Each node in the model has [6 degrees of freedom](http://en.wikipedia.org/wiki/Degrees_of_freedom_%28mechanics%29#Six_degrees_of_freedom) (displacement along the x, y, and z axes, and rotation around the x, y, and z axes). So an un-connected set of _N_ nodes would have _6N_ degrees of freedom. However, the connections between nodes (rim segments or spokes) reduce the total degrees of freedom. A properly connected finite-element model only has _6_ degrees of freedom left, so in general you must constrain 6 degrees of freedom in order to solve the model. You can do this by constraining all 6 DOFs for a single node (for example, the hub reference node) or you can constrain the displacement DOFs for 3 separate nodes.
+
+Constrain a node using the BicycleWheelFEM object's `add_constraint()` function.
+
+```python
+# constrain the X and Y position of node 0.
+fem.add_constraint(0, [0, 1])
+
+# constrain the X, Y, and Z position, and rotation around Z of nodes 0 through 5
+fem.add_constraint(range(6), [0, 1, 2, 5])
+
+# set the x-displacement of node 5 to 1 mm
+fem.add_constraint(5, 0, 0.001)
+
+# constrain all DOFs of the hub reference node
+fem.add_constraint(R_hub.node_id, range(6))
+```
+
+Note that if the third argument is omitted, the DOF will be fixed at zero (i.e. no movement or rotation). The units for displacement DOFs is meters and the units for rotational DOFs is [radians](http://en.wikipedia.org/wiki/Radian).
+
+If your model is not properly constrained, the solver may not be able to find a valid solution.
 
 ### 4 Add forces or torques
 
+A fully constrained model will produce a solution, but the solution may not be very interesting unless you add _forces and torques_. These forces might, for example, represent the upward force from the ground, the torque applied by the sprocket or a disc brake, or lateral forces during cornering.
+
+> Forces and torques can only be applied to nodes. If you want to apply a force to a point on the rim in between two spokes, simply create a spoke nipple there using the `geom.add_nipple()` function, but don't connect a spoke to that point.
+
+The numbering scheme for forces follows the numbering scheme for constraint DOFs: [0, 1, 2] are the forces along the x, y, and z directions, and [3, 4, 5] are the torques about the x, y, and z axes.
+
+```python
+# apply an upward force of 100 N to the bottom-most node
+fem.add_force(0, 0, 100)
+
+# apply a torque of 50 N-m to the hub around the axle (z-axis)
+fem.add_force(R_hub.node_id, 5, 50)
+```
+
 ### 5 Solve and extract results
 
-## The Model
 
-The code is based on an object-oriented framework. The class hierarchy for a typical wheel calculation is as follows:
-
-* BicycleWheelFEM - Finite-element solver
-  * BicycleWheelGeom
 
 ## Contents
 
