@@ -58,7 +58,7 @@ geom.add_spoke(9, 3)
 ...
 ```
 
-Diameters should be specified in meters. The `add_spoke(i, j)` command adds a spoke connecting the <i>th hub eyelet (a number between 1 and the number of hub eyelets) to the <j>th spoke nipple (a number between 1 and the number of spoke nipples). These are **not** the node IDs of these points.
+Diameters should be specified in meters. The `add_spoke(i, j)` command adds a spoke connecting the `i`th hub eyelet (a number between 1 and the number of hub eyelets) to the `j`th spoke nipple (a number between 1 and the number of spoke nipples). These are **not** the node IDs of these points.
 
 If the `n_spokes` parameter is omitted and a wheel file is not provided, the locations of the hub eyelets and spoke nipples must be defined manually.
 
