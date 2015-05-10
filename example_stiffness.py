@@ -1,20 +1,21 @@
 #!/usr/bin/env python
 
-from classes.bikewheelfem import *
+import bikewheelcalc as bc
 import matplotlib.pyplot as pp
+import numpy as np
 
 
 # Initialize wheel geometry from wheel files
 geom = []
-geom.append(WheelGeometry(wheel_file='wheel_36_x1.txt'))
-geom.append(WheelGeometry(wheel_file='wheel_36_x2.txt'))
-geom.append(WheelGeometry(wheel_file='wheel_36_x3.txt'))
-geom.append(WheelGeometry(wheel_file='wheel_36_x4.txt'))
-geom.append(WheelGeometry(wheel_file='wheel_36_crowsfoot.txt'))
+geom.append(bc.WheelGeometry(wheel_file='wheel_36_x1.txt'))
+geom.append(bc.WheelGeometry(wheel_file='wheel_36_x2.txt'))
+geom.append(bc.WheelGeometry(wheel_file='wheel_36_x3.txt'))
+geom.append(bc.WheelGeometry(wheel_file='wheel_36_x4.txt'))
+geom.append(bc.WheelGeometry(wheel_file='wheel_36_crowsfoot.txt'))
 
 
 # Rim section and material properties
-r_sec = RimSection(area=82.0e-6,      # cross-sectional area
+r_sec = bc.RimSection(area=82.0e-6,      # cross-sectional area
                    I11=5620.0e-12,    # area moment of inertia (twist)
                    I22=1187.0e-12,    # area moment of inertia (wobble)
                    I33=1124.0e-12,    # area moment of inertia (squish)
@@ -22,7 +23,7 @@ r_sec = RimSection(area=82.0e-6,      # cross-sectional area
                    shear_mod=26.0e9)  # shear modulus - aluminum
 
 # spoke section and material properties
-s_sec = SpokeSection(2.0e-3,  # spoke diameter
+s_sec = bc.SpokeSection(2.0e-3,  # spoke diameter
                      210e9)   # Young's modulus - steel
 
 # Rotational stiffness is the ratio of applied torque to hub twist in degrees.
@@ -42,10 +43,10 @@ stiff_rad = []  # Units: [N/m]
 
 for g in geom:
 
-    fem = BicycleWheelFEM(g, r_sec, s_sec)
+    fem = bc.BicycleWheelFEM(g, r_sec, s_sec)
 
     # Create a rigid body to constrain the hub nodes
-    r_hub = RigidBody('hub', [0, 0, 0], fem.get_hub_nodes())
+    r_hub = bc.RigidBody('hub', [0, 0, 0], fem.get_hub_nodes())
     fem.add_rigid_body(r_hub)
 
     # Calculate radial stiffness. Apply an upward force to the bottom node
@@ -71,7 +72,7 @@ for g in geom:
 
 
     # Calculate rotational stiffness. Fix both hub and rim and rotate the hub
-    r_rim = RigidBody('rim', [0, 0, 0], fem.get_rim_nodes())
+    r_rim = bc.RigidBody('rim', [0, 0, 0], fem.get_rim_nodes())
     fem.add_rigid_body(r_rim)
 
     fem.add_constraint(r_rim.node_id, range(6))   # fix rim
