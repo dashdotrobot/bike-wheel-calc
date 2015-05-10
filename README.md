@@ -1,14 +1,14 @@
-# bike-wheel-fem
+# bike-wheel-calc
 Finite-element stress analysis for bicycle wheel implemented in Python and NumPy
 
-bike-wheel-fem is a Python module for calculating the stresses and strains in a
+bike-wheel-calc is a Python module for calculating the stresses and strains in a
 wire (thin-spoked) wheel. I am making every effort to make the code usable and
 self-explanatory to bike enthusiasts and mechanics, regardless of background in
 stress analysis or numerical methods.
 
 ## Overview
 
-**bike-wheel-fem** is a flexible, open-source, 3-dimensional finite-element solver for calculating the stresses and deformations of a thin-spoked bicycle wheel. By changing the geometry and material properties of the rim and spokes, and the spoke lacing pattern, almost any bicycle wheel can be simulated. The wheel can be arbitrarily constrained to represent real-world scenarios, and arbitrary forces and torques can be applied to points on the rim or hub.
+**bike-wheel-calc** is a flexible, open-source, 3-dimensional finite-element solver for calculating the stresses and deformations of a thin-spoked bicycle wheel. By changing the geometry and material properties of the rim and spokes, and the spoke lacing pattern, almost any bicycle wheel can be simulated. The wheel can be arbitrarily constrained to represent real-world scenarios, and arbitrary forces and torques can be applied to points on the rim or hub.
 
 Some example calculations that can be performed with bike-wheel-fem are:
 * calculating change in spoke tension under rider weight, acceleration, cornering, etc
