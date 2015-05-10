@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 
-from classes.bikewheelfem import *
+import bikewheelcalc as bc
 import matplotlib.pyplot as pp
+import numpy as np
 
 
 # Initialize wheel geometry from wheel files
-geom = WheelGeometry(wheel_file='wheel_36_x3.txt')
+geom = bc.WheelGeometry(wheel_file='wheel_36_x3.txt')
 
 # Rim section and material properties
-r_sec = RimSection(area=82.0e-6,      # cross-sectional area
+r_sec = bc.RimSection(area=82.0e-6,      # cross-sectional area
                    I11=5620.0e-12,    # area moment of inertia (twist)
                    I22=1187.0e-12,    # area moment of inertia (wobble)
                    I33=1124.0e-12,    # area moment of inertia (squish)
@@ -16,7 +17,7 @@ r_sec = RimSection(area=82.0e-6,      # cross-sectional area
                    shear_mod=26.0e9)  # shear modulus - aluminum
 
 # spoke section and material properties
-s_sec = SpokeSection(2.0e-3,  # spoke diameter
+s_sec = bc.SpokeSection(2.0e-3,  # spoke diameter
                      210e9)   # Young's modulus - steel
 
 
@@ -29,11 +30,11 @@ for d in diam_flange:
     # Create FEM model
     geom.d1_hub = d
     geom.d2_hub = d
-    fem = BicycleWheelFEM(geom, r_sec, s_sec)
+    fem = bc.BicycleWheelFEM(geom, r_sec, s_sec)
 
     # Rigid body to constrain hub nodes
-    r_hub = RigidBody('hub', [0, 0, 0], fem.get_hub_nodes())
-    r_rim = RigidBody('rim', [0, 0, 0], fem.get_rim_nodes())
+    r_hub = bc.RigidBody('hub', [0, 0, 0], fem.get_hub_nodes())
+    r_rim = bc.RigidBody('rim', [0, 0, 0], fem.get_rim_nodes())
     fem.add_rigid_body(r_hub)
     fem.add_rigid_body(r_rim)
 
