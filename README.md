@@ -148,9 +148,38 @@ fem.add_force(0, 0, 100)
 fem.add_force(R_hub.node_id, 5, 50)
 ```
 
+**Note** that you can add a force to a node which has been constrained, so long as the force is applied to a degree of freedom which has not been constrained.
+
+```python
+# Hold the position of the hub fixed, but apply a twisting torque of 50 N-m
+fem.add_constraint(R_hub.node_id, [0 1 2])
+fem.add_force(R_hub.node_id, 5, 50)
+```
+
 ### 5 Solve and extract results
 
+Once you have created your model and added constraints and forces, solving the equations is very straightforward.
 
+```python
+solution = fem.solve()
+```
+
+The `solution` object is an instance of the class `FEMSolution` which contains all the numerical results. It also has a simple function to plot the deformed (exaggerated) shape of the wheel. The nodal displacements and rotations can be extracted from an (N x 6)-dimensional array, where N is the number of nodes.
+
+```python
+# Get the x-displacement of node 12
+x_disp_12 = solution.nodal_disp[12][0]
+
+# Get the rotation of the hub around the axle (z-axis)
+hub_rot = solution.nodal_disp[R_hub.node_id][5]
+
+# Get the total (vector) displacement of node 4
+d_4 = solution.nodal_disp[4][0:3]
+```
+
+Each constrained node has a reaction force (or torque) associated with it. The reaction force is the force that would have to be applied to the node in order to keep it in the desired position. Reaction forces are only defined for degrees of freedom which have been constrained. The shape of the `nodal_rxn` array is the same size and shape as the `nodal_disp` array, but all the entries corresponding to unconstrained DOFs will be zero.
+
+> **Note** An applied force can produce both a reaction force and a reaction torque. Imagine you are holding a fishing rod. When a fish grabs the line, you have to apply a force (pulling the fish towards you), but at the same time you have to apply a torque to keep the rod from twisting out of your hands.
 
 ## Contents
 
