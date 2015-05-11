@@ -10,6 +10,7 @@ N_RIM = 1
 N_HUB = 2
 N_REF = 3
 
+
 class FEMSolution:
     el_rim = 1
     el_spoke = 2
@@ -139,7 +140,7 @@ class FEMSolution:
 
         # internal forces at each node
         self.spokes_t = []  # spoke tension
-        
+
         self.rim_t = []     # rim tension (hoop stress)
         self.rim_v_i = []   # in-plane shear
         self.rim_v_o = []   # out-of-plane shear
