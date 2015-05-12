@@ -37,14 +37,13 @@ class BicycleWheelFEM:
         # return np.arange(self.geom.n_rim_nodes)
         return np.where(self.type_nodes == N_RIM)[0]
 
-
     def get_hub_nodes(self):
         'Return node IDs of all nodes on the hub.'
         # return np.arange(self.geom.n_hub_nodes) + self.geom.n_rim_nodes
         return np.where(self.type_nodes == N_HUB)[0]
 
-    def get_spoke_tension(self, u):
-        'Calculate tension in all spokes.'
+    def calc_spoke_tension(self, u):
+        'Calculate tension in all spokes, including pre-tension'
 
         f = np.array(self.k_spokes.dot(u)).flatten()
         t = []
@@ -57,7 +56,9 @@ class BicycleWheelFEM:
 
             e1 = self.get_node_pos(n2) - self.get_node_pos(n1)  # vector along spoke
             f2 = np.array(f[6*n2:6*n2+3:])                      # force vector at rim node
-            t.append(e1.dot(f2) / np.sqrt(e1.dot(e1)))
+
+            delta_t = e1.dot(f2) / np.sqrt(e1.dot(e1))
+            t.append(delta_t + self.el_tension[e])
 
         return np.array(t)
 
@@ -77,7 +78,7 @@ class BicycleWheelFEM:
             n1 = self.el_n1[e]
             n2 = self.el_n2[e]
 
-            k_rim = self.calc_k_rim(n1, n2, np.array([0, 0, 0]), self.rim_sec)
+            k_rim = self.calc_k_rim(e)
             u_el = np.concatenate((u[6*n1:6*n1+6:], u[6*n2:6*n2+6])).flatten()
 
             f_rim = np.array(k_rim.dot(u_el)).flatten()
@@ -108,14 +109,17 @@ class BicycleWheelFEM:
 
         return t, v_i, v_o, m_t, m_w, m_s
 
-    def calc_k_rim(self, node1, node2, ref, sec):
+    def calc_k_rim(self, e):
         """Calculate stiffness matrix for a single rim element.
 
         For details, see R. Palaninathan, P.S. Chandrasekharan,
         Computers and Structures, 4(21), pp. 663-669, 1985."""
 
-        node1_pos = self.get_node_pos(node1)
-        node2_pos = self.get_node_pos(node2)
+        node1_pos = self.get_node_pos(self.el_n1[e])
+        node2_pos = self.get_node_pos(self.el_n2[e])
+
+        ref = np.array([0, 0, 0])
+        sec = self.rim_sec
 
         d = node2_pos - node1_pos  # beam orientation vector
         r1 = node1_pos - ref       # radial vector to node 1
@@ -216,24 +220,39 @@ class BicycleWheelFEM:
 
         return k_r
 
-    def calc_k_spoke(self, node1, node2, sec):
+    def calc_k_spoke(self, e):
         'Calculate stiffness matrix for thin elastic rod (no bending or torsion).'
 
-        node1_pos = self.get_node_pos(node1)
-        node2_pos = self.get_node_pos(node2)
+        node1_pos = self.get_node_pos(self.el_n1[e])
+        node2_pos = self.get_node_pos(self.el_n2[e])
 
         # Tangent vector
         e1 = node2_pos - node1_pos
         l = np.sqrt(e1.dot(e1))
         e1 = e1 / l  # convert to unit vector
+        e2 = np.cross(e1, np.array([0, 0, 1]))
+        e2 = e2 / np.sqrt(e2.dot(e2))
+        e3 = np.cross(e1, e2)
 
-        # Rotation matrix to global coordinates
-        Tg = np.matrix(np.zeros((6, 6)))
-        Tg[:3:, 0] = e1.reshape((3, 1))
-        Tg[3::, 3] = e1.reshape((3, 1))
+        # do not allow negative spoke tension (compression)
+        spoke_tension = self.el_tension[e]
+        if spoke_tension < 0:
+            spoke_tension = 0
 
         k_spoke = np.matrix(np.zeros((6, 6)))
-        k_spoke[::3, ::3] = sec.area*sec.young_mod/l * np.matrix([[1, -1], [-1, 1]])
+        k_spoke[::3, ::3] = self.spoke_sec.area*self.spoke_sec.young_mod/l * \
+            np.matrix([[1, -1], [-1, 1]])
+        k_spoke[1::3, 1::3] = spoke_tension/l * np.matrix([[1, -1], [-1, 1]])
+        k_spoke[2::3, 2::3] = spoke_tension/l * np.matrix([[1, -1], [-1, 1]])
+
+        # rotation matrix to global coordinates
+        Tg = np.matrix(np.zeros((6, 6)))
+        Tg[:3:, 0] = e1.reshape((3, 1))
+        Tg[:3:, 1] = e2.reshape((3, 1))
+        Tg[:3:, 2] = e3.reshape((3, 1))
+        Tg[3::, 3] = e1.reshape((3, 1))
+        Tg[3::, 4] = e2.reshape((3, 1))
+        Tg[3::, 5] = e3.reshape((3, 1))
 
         k_spoke = Tg * k_spoke * Tg.T
 
@@ -260,21 +279,16 @@ class BicycleWheelFEM:
                 dof = np.concatenate((dof_n1, dof_n2))
 
                 self.k_rim[np.ix_(dof, dof)] = self.k_rim[dof][:, dof] + \
-                                               self.calc_k_rim(self.el_n1[e],
-                                                               self.el_n2[e],
-                                                               np.array([0, 0, 0]),
-                                                               self.rim_sec)
+                    self.calc_k_rim(e)
             if self.el_type[e] == EL_SPOKE:
                 dof_n1 = 6*self.el_n1[e] + np.arange(3)
                 dof_n2 = 6*self.el_n2[e] + np.arange(3)
 
                 dof = np.concatenate((dof_n1, dof_n2))
 
-                self.k_spokes[np.ix_(dof, dof)] = self.k_spokes[dof][:, dof] + \
-                                                  self.calc_k_spoke(self.el_n1[e], 
-                                                                    self.el_n2[e],
-                                                                    self.spoke_sec)
-                                                                   
+                self.k_spokes[np.ix_(dof, dof)] = self.k_spokes[dof][:, dof] +\
+                    self.calc_k_spoke(e)
+
         self.k_global = self.k_rim + self.k_spokes
 
     def add_rigid_body(self, rigid_body):
@@ -455,7 +469,7 @@ class BicycleWheelFEM:
 
                 self.soln_updated = False
 
-    def solve(self):
+    def solve_iteration(self):
         'Solve elasticity equations for nodal displacements.'
 
         # Form augmented, reduced stiffness matrix
@@ -524,7 +538,7 @@ class BicycleWheelFEM:
         soln.nodal_rxn[dof_rxn / 6, dof_rxn % 6] = rxn
 
         # spoke tension and rim stresses
-        soln.spokes_t = self.get_spoke_tension(u)
+        soln.spokes_t = self.calc_spoke_tension(u)
 
         soln.rim_t, soln.rim_v_i, soln.rim_v_o, soln.rim_m_t, soln.rim_m_w, soln.rim_m_s = \
             self.get_rim_stresses(u)
@@ -532,6 +546,26 @@ class BicycleWheelFEM:
         print('# ---------------------------------------')
 
         return soln
+
+    def solve(self, pretension=None):
+
+        self.el_tension = np.zeros(len(self.el_type))
+
+        if pretension is not None:
+
+            self.el_tension = pretension * np.ones(len(self.el_type))
+
+            # solve
+            soln_1 = self.solve_iteration()
+
+            # update spoke tensions
+            ind = np.where(self.el_type == EL_SPOKE)
+            self.el_tension[ind] = soln_1.spokes_t
+
+        # solve with updated element tensions
+        soln_2 = self.solve_iteration()
+
+        return soln_2
 
     def __init__(self, geom, rim_sec, spoke_sec):
         self.geom = geom
