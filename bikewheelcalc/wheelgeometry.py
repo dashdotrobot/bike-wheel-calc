@@ -285,8 +285,7 @@ class WheelGeometry:
 
         if not n_spokes is None:
             # Create equally spaced hub eyelets and spoke nipples
-            self.a_rim_nodes = np.linspace(0, 2*np.pi * (n_spokes-1)/n_spokes, n_spokes
-                )
+            self.a_rim_nodes = np.linspace(0, 2*np.pi * (n_spokes-1)/n_spokes, n_spokes)
             self.a_hub_nodes = np.linspace(0, 2*np.pi * (n_spokes-1)/n_spokes, n_spokes)
             self.s_hub_nodes = np.zeros(n_spokes, dtype=np.int8)
             self.s_hub_nodes[::2] = 1    # Drive-side nodes
