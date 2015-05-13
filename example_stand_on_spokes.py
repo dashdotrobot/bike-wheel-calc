@@ -34,7 +34,7 @@ fem.add_force(0, 1, 500)
 fem.add_force(1, 1, 250)
 fem.add_force(35, 1, 250)
 
-soln = fem.solve()
+soln = fem.solve(pretension=1000)
 
 # Draw deformed wheel
 f1 = pp.figure(1)
@@ -51,6 +51,11 @@ pp.bar(range(len(soln.spokes_t)), soln.spokes_t[ind_shift])
 pp.xlabel('spoke number')
 pp.ylabel('change in spoke tension [Newtons]')
 pp.savefig('spoke_t_36x3.png')
+
+
+f3 = pp.figure(3)
+soln.plot_spoke_tension(fig=f3)
+f3.gca().set_yticklabels([])
 
 
 pp.show()
