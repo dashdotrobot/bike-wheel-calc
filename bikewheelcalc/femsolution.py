@@ -67,6 +67,7 @@ class FEMSolution:
         return x_def, y_def
 
     def plot_deformed_wheel(self, scale_rad=0.1, scale_tan=0.0):
+        'Plot the exaggerated, deformed wheel shape.'
 
         rim_nodes = np.where(self.type_nodes == N_RIM)[0]
 
@@ -119,6 +120,40 @@ class FEMSolution:
 
         return pp.gcf()
 
+    def plot_spoke_tension(self, fig=None):
+        'Plot the spoke tensions on a polar plot'
+
+        if fig is None:
+            fig = pp.figure()
+
+        ax1 = fig.add_axes([0.1, 0.1, 0.8, 0.8], polar=True)
+        ax1.set_xticklabels([])
+
+        # drive-side spokes
+        angle = self.a_rim_nodes[np.where(self.s_hub_nodes == 1)[0]] - np.pi/2
+        tension = self.spokes_t[np.where(self.s_hub_nodes == 1)[0]]
+
+        angle = np.append(angle, angle[0])
+        tension = np.append(tension, tension[0])
+
+        l_drive, = ax1.plot(angle, tension, '.-',
+                            color='#69D2E7', linewidth=3, markersize=15)
+
+        # non-drive-side spokes
+        angle = self.a_rim_nodes[np.where(self.s_hub_nodes == -1)[0]] - np.pi/2
+        tension = self.spokes_t[np.where(self.s_hub_nodes == -1)[0]]
+
+        angle = np.append(angle, angle[0])
+        tension = np.append(tension, tension[0])
+
+        l_nondrive, = ax1.plot(angle, tension, '.-',
+                            color='#F38630', linewidth=3, markersize=15)
+
+        l_drive.set_label('right')
+        l_nondrive.set_label('left')
+
+        ax1.legend(loc='center')
+
     def __init__(self, fem):
         self.updated = False
 
@@ -128,6 +163,9 @@ class FEMSolution:
         self.y_nodes = fem.y_nodes.copy()
         self.z_nodes = fem.z_nodes.copy()
         self.type_nodes = fem.type_nodes.copy()
+
+        self.a_rim_nodes = fem.geom.a_rim_nodes.copy()
+        self.s_hub_nodes = fem.geom.s_hub_nodes.copy()
 
         self.el_type = fem.el_type.copy()
         self.el_n1 = fem.el_n1.copy()
