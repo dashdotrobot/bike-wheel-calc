@@ -44,18 +44,8 @@ pp.savefig('def_36x3.png')
 
 # Plot spoke tension
 f2 = pp.figure(2)
-
-# Move bars so loaded spokes appear in center
-ind_shift = (np.arange(len(soln.spokes_t)) + 18) % 36
-pp.bar(range(len(soln.spokes_t)), soln.spokes_t[ind_shift])
-pp.xlabel('spoke number')
-pp.ylabel('change in spoke tension [Newtons]')
-pp.savefig('spoke_t_36x3.png')
-
-
-f3 = pp.figure(3)
-soln.plot_spoke_tension(fig=f3)
-f3.gca().set_yticklabels([])
+soln.plot_spoke_tension(fig=f2)
+f2.gca().set_yticklabels([])
 
 
 pp.show()
