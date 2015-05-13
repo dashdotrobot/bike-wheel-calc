@@ -290,6 +290,8 @@ class WheelGeometry:
             self.s_hub_nodes = np.zeros(n_spokes, dtype=np.int8)
             self.s_hub_nodes[::2] = 1    # Drive-side nodes
             self.s_hub_nodes[1::2] = -1  # Left-side nodes
+            self.n_hub_nodes = n_spokes
+            self.n_rim_nodes = n_spokes
         else:
             self.a_rim_nodes = np.array([], dtype=np.float)
             self.a_hub_nodes = np.array([], dtype=np.float)
