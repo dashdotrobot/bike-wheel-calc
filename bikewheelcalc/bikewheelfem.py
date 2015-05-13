@@ -625,6 +625,3 @@ class BicycleWheelFEM:
 
         # solution arrays
         self.soln_updated = False
-
-
-
