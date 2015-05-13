@@ -74,8 +74,12 @@ class FEMSolution:
         u_rad, u_tan = self.get_polar_displacements(rim_nodes)
 
         # Scale the largest displacement to a percentage of the rim radius
-        scale_rad = self.geom.d_rim/2 / max(np.abs(u_rad)) * scale_rad
-        scale_tan = self.geom.d_rim/2 / max(np.abs(u_rad)) * scale_tan
+        if max(np.abs(u_rad)) > 0:
+            scale_rad = self.geom.d_rim/2 / max(np.abs(u_rad)) * scale_rad
+            scale_tan = self.geom.d_rim/2 / max(np.abs(u_rad)) * scale_tan
+        else:
+            scale_rad = 0
+            scale_tan = 0
 
         theta = self.geom.a_rim_nodes - np.pi/2
 
