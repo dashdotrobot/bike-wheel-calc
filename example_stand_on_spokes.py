@@ -38,7 +38,7 @@ soln = fem.solve(pretension=1000)
 
 # Draw deformed wheel
 f1 = pp.figure(1)
-f_def = soln.plot_deformed_wheel(scale_rad=0.05)
+f_def = soln.plot_deformed_wheel(scale_rad=0.1)
 pp.axis('off')
 pp.savefig('def_36x3.png')
 
