@@ -279,16 +279,20 @@ class BicycleWheelFEM:
 
         # Loop over element matrices and scatter to global K matrix
         for e in range(len(self.el_type)):
-            dof_n1 = 6*self.el_n1[e] + np.arange(6)  # node 1
-            dof_n2 = 6*self.el_n2[e] + np.arange(6)  # node 2
-
-            dof = np.concatenate((dof_n1, dof_n2))
-
-            # calculate 12x12 stiffness matrix and scatter
             if self.el_type[e] == EL_RIM:
+                dof_n1 = 6*self.el_n1[e] + np.arange(6)
+                dof_n2 = 6*self.el_n2[e] + np.arange(6)
+
+                dof = np.concatenate((dof_n1, dof_n2))
+
                 self.k_rim[np.ix_(dof, dof)] = self.k_rim[dof][:, dof] + \
                     self.calc_k_rim(e)
             if self.el_type[e] == EL_SPOKE:
+                dof_n1 = 6*self.el_n1[e] + np.arange(3)
+                dof_n2 = 6*self.el_n2[e] + np.arange(3)
+
+                dof = np.concatenate((dof_n1, dof_n2))
+
                 self.k_spokes[np.ix_(dof, dof)] = self.k_spokes[dof][:, dof] +\
                     self.calc_k_spoke(e)
 
@@ -398,7 +402,6 @@ class BicycleWheelFEM:
         self.type_nodes = np.delete(self.type_nodes, n)
         self.bc_u = np.delete(self.bc_u, 6*n + np.arange(6))
         self.bc_f = np.delete(self.bc_f, 6*n + np.arange(6))
-
         for _ in range(6):
             self.bc_const.pop(n)
             self.bc_force.pop(n)
