@@ -261,11 +261,12 @@ class BicycleWheelFEM:
     def calc_stiff_mat(self):
         'Calculate global stiffness matrix by element scatter algorithm.'
 
-        print('# Calculating global stiffness matrix ---')
-        print('# -- Nodes: {:d}'.format(self.n_nodes))
-        print('# -- DOFs : {:d}'.format(6*self.n_nodes))
-        print('# ---------------------------------------')
-        print('')
+        if self.verbose:
+            print('# Calculating global stiffness matrix ---')
+            print('# -- Nodes: {:d}'.format(self.n_nodes))
+            print('# -- DOFs : {:d}'.format(6*self.n_nodes))
+            print('# ---------------------------------------')
+            print('')
 
         self.k_rim = np.matrix(np.zeros((6*self.n_nodes, 6*self.n_nodes)))
         self.k_spokes = self.k_rim.copy()
@@ -316,8 +317,9 @@ class BicycleWheelFEM:
         self.bc_u = np.append(self.bc_u, 6*[0])
         self.bc_f = np.append(self.bc_f, 6*[0])
 
-        print('# Adding new rigid body: {:s}'.format(rigid_body.name))
-        print('# -- Reference node {:d}\n'.format(rigid_body.node_id))
+        if self.verbose:
+            print('# Adding new rigid body: {:s}'.format(rigid_body.name))
+            print('# -- Reference node {:d}\n'.format(rigid_body.node_id))
 
         # Recalculate reduction matrices
         self.calc_reduction_matrices()
@@ -483,10 +485,6 @@ class BicycleWheelFEM:
         k_aug = k_red.copy()
         f_aug = np.zeros(k_aug.shape[0])
 
-        print('# Solving for nodal displacements -------')
-        print('# -- Reduced system of equations:')
-        print('#      Reduced DOFs: {:d}'.format(k_aug.shape[0]))
-
         # Apply constraints to nodes
         for dof_c in [d for d in range(6*self.n_nodes) if self.bc_const[d]]:
             dof_r = 6*self.node_r_id[int(dof_c) / 6] + dof_c % 6
@@ -502,7 +500,11 @@ class BicycleWheelFEM:
             f_aug[dof_r] = self.bc_f[dof_c]
 
         # Solve for reduced nodal displacements
-        print('#      Rank = {:d} / ({:d})'.format(np.linalg.matrix_rank(k_aug), k_aug.shape[0]))
+        if self.verbose:
+            print('# Solving for nodal displacements -------')
+            print('# -- Reduced system of equations:')
+            print('#      Reduced DOFs: {:d}'.format(k_aug.shape[0]))
+            print('#      Rank = {:d} / ({:d})'.format(np.linalg.matrix_rank(k_aug), k_aug.shape[0]))
 
         try:
             u_red = np.linalg.solve(k_aug, f_aug)
@@ -543,11 +545,14 @@ class BicycleWheelFEM:
         soln.rim_t, soln.rim_v_i, soln.rim_v_o, soln.rim_m_t, soln.rim_m_w, soln.rim_m_s = \
             self.get_rim_stresses(u)
 
-        print('# ---------------------------------------')
+        if self.verbose:
+            print('# ---------------------------------------')
 
         return soln
 
-    def solve(self, pretension=None):
+    def solve(self, pretension=None, verbose=True):
+
+        self.verbose = verbose
 
         self.el_tension = np.zeros(len(self.el_type))
 
@@ -568,6 +573,9 @@ class BicycleWheelFEM:
         return soln_2
 
     def __init__(self, geom, rim_sec, spoke_sec):
+
+        self.verbose = True
+
         self.geom = geom
         self.rim_sec = rim_sec
         self.spoke_sec = spoke_sec
