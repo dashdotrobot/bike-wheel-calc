@@ -30,9 +30,7 @@ All of these packages and more are included in the popular [Anaconda distributio
 
 ## Installation
 
-Download all the files into one directory. You can put the module
-bikewheelfem.py anywhere on your module path, or keep it in the same directory
-as where you write python scripts.
+Download all the files into one directory. You can put the folder bikewheelcalc on your module path, or keep it in the same directory as where you write your Python scripts.
 
 ## Usage
 
@@ -187,7 +185,7 @@ Each constrained node has a reaction force (or torque) associated with it. The r
 * README.md - this file
 * example_"".py - Example scripts
 * wheel_"".txt - Example wheel definition files
-* classes/
+* bikewheelcalc/
  * bikewheelfem.py - BicycleWheelFEM class. Core finite-element solver routines
  * femsolution.py - FEMSolution class. Result database and post-processing / visualization methods.
  * helpers.py - utility methods
