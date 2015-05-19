@@ -49,9 +49,8 @@ class BicycleWheelFEM:
         return np.where(self.el_type == EL_SPOKE)[0]
 
     def calc_spoke_tension(self, u):
-        'Calculate tension in all spokes, including pre-tension'
+        'Calculate change in tension in all spokes, NOT including pre-tension'
 
-        f = np.array(self.k_spokes.dot(u)).flatten()
         t = []
 
         # Iterate over spoke elements
@@ -61,14 +60,19 @@ class BicycleWheelFEM:
             n2 = self.el_n2[e]  # rim node
 
             e1 = self.get_node_pos(n2) - self.get_node_pos(n1)  # radial vector
-            f2 = np.array(f[6*n2:6*n2+3:])  # force at rim node
+            e1 = e1 / np.sqrt(e1.dot(e1))  # convert to unit vector
 
-            delta_t = e1.dot(f2) / np.sqrt(e1.dot(e1))
-            t.append(delta_t + self.el_tension[e])
+            k_spoke = self.calc_k_spoke(e)
+            u_el = np.concatenate((u[6*n1:6*n1+3:], u[6*n2:6*n2+3:])).flatten()
+
+            f_element = np.array(k_spoke.dot(u_el)).flatten()
+            f_spoke = f_element[3:6:]
+
+            t.append(e1.dot(f_spoke))
 
         return np.array(t)
 
-    def get_rim_stresses(self, u):
+    def calc_rim_stresses(self, u):
         'Calculate internal forces at each rim node.'
 
         t = []    # tension
@@ -241,15 +245,20 @@ class BicycleWheelFEM:
         e3 = np.cross(e1, e2)
 
         # do not allow negative spoke tension (compression)
-        spoke_tension = self.el_tension[e]
+        spoke_tension = self.el_pretension[e]
         if spoke_tension < 0:
+            if self.verbose:
+                print('*** Spoke {:d} has negative pre-tension. Result may be inaccurate'.format(e))
             spoke_tension = 0
 
+        k_n = self.spoke_sec.area*self.spoke_sec.young_mod / l
+        k_t = spoke_tension / l
+        k_b = 3 * self.spoke_sec.young_mod*self.spoke_sec.I / l**3
+
         k_spoke = np.matrix(np.zeros((6, 6)))
-        k_spoke[::3, ::3] = self.spoke_sec.area*self.spoke_sec.young_mod/l * \
-            np.matrix([[1, -1], [-1, 1]])
-        k_spoke[1::3, 1::3] = spoke_tension/l * np.matrix([[1, -1], [-1, 1]])
-        k_spoke[2::3, 2::3] = spoke_tension/l * np.matrix([[1, -1], [-1, 1]])
+        k_spoke[0::3, 0::3] = k_n * np.matrix([[1, -1], [-1, 1]])
+        k_spoke[1::3, 1::3] = (k_t + k_b) * np.matrix([[1, -1], [-1, 1]])
+        k_spoke[2::3, 2::3] = (k_t + k_b) * np.matrix([[1, -1], [-1, 1]])
 
         # rotation matrix to global coordinates
         Tg = np.matrix(np.zeros((6, 6)))
@@ -546,10 +555,12 @@ class BicycleWheelFEM:
         soln.nodal_rxn[dof_rxn / 6, dof_rxn % 6] = rxn
 
         # spoke tension and rim stresses
-        soln.spokes_t = self.calc_spoke_tension(u)
+        el_spokes = np.where(self.el_type == EL_SPOKE)
+        soln.spokes_t = self.calc_spoke_tension(u) + \
+            self.el_pretension[el_spokes]
 
         soln.rim_t, soln.rim_v_i, soln.rim_v_o, soln.rim_m_t, soln.rim_m_w, soln.rim_m_s = \
-            self.get_rim_stresses(u)
+            self.calc_rim_stresses(u)
 
         if self.verbose:
             print('# ---------------------------------------')
@@ -559,19 +570,19 @@ class BicycleWheelFEM:
     def solve(self, pretension=None, verbose=True):
 
         self.verbose = verbose
-
-        self.el_tension = np.zeros(len(self.el_type))
+        self.el_pretension = np.zeros(len(self.el_type))
 
         if pretension is not None:
 
-            self.el_tension = pretension * np.ones(len(self.el_type))
+            # set initial pretension
+            self.el_pretension = pretension * np.ones(len(self.el_type))
 
             # solve
             soln_1 = self.solve_iteration()
 
             # update spoke tensions
-            ind = np.where(self.el_type == EL_SPOKE)
-            self.el_tension[ind] = soln_1.spokes_t
+            el_spokes = np.where(self.el_type == EL_SPOKE)
+            self.el_pretension[el_spokes] = soln_1.spokes_t
 
         # solve with updated element tensions
         soln_2 = self.solve_iteration()
