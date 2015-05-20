@@ -175,7 +175,7 @@ class BicycleWheelFEM:
         
         a[2,3] = R**2/2*(B/(sec.young_mod*sec.I22) - V/(sec.shear_mod*sec.I11))
         a[3,2] = a[2,3]
-        a[2,4] = R**2/2*(S/(sec.shear_mod*sec.I11) - D/(sec.young_mod*sec.I22))
+        a[2,4] = R**2/2*(2*S/(sec.shear_mod*sec.I11) - D/(sec.young_mod*sec.I22))
         a[4,2] = a[2,4]
         a[3,3] = R/2*(N/(sec.shear_mod*sec.I11) + B/(sec.young_mod*sec.I22))
         a[3,4] = D*R/2*(1/(sec.shear_mod*sec.I11) - 1/(sec.young_mod*sec.I22))
