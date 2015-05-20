@@ -151,7 +151,7 @@ class FEMSolution:
         tension = np.append(tension, tension[0])
 
         l_nondrive, = ax1.plot(angle, tension, '.-',
-                            color='#F38630', linewidth=3, markersize=15)
+                               color='#F38630', linewidth=3, markersize=15)
 
         l_drive.set_label('right')
         l_nondrive.set_label('left')
