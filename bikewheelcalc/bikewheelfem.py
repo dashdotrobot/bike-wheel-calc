@@ -589,9 +589,9 @@ class BicycleWheelFEM:
 
         return soln_2
 
-    def __init__(self, geom, rim_sec, spoke_sec):
+    def __init__(self, geom, rim_sec, spoke_sec, verbose=False):
 
-        self.verbose = True
+        self.verbose = verbose
 
         self.geom = geom
         self.rim_sec = rim_sec
