@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import bikewheelcalc as bc
-import numpy as np
 import matplotlib.pyplot as pp
 
 
@@ -10,18 +9,18 @@ geom_36x3 = bc.WheelGeometry(wheel_file='wheel_36_x3.txt')
 
 # Rim section and material properties
 r_sec = bc.RimSection(area=82.0e-6,      # cross-sectional area
-                   I11=5620.0e-12,    # area moment of inertia (twist)
-                   I22=1187.0e-12,    # area moment of inertia (wobble)
-                   I33=1124.0e-12,    # area moment of inertia (squish)
-                   young_mod=69.0e9,  # Young's modulus - aluminum
-                   shear_mod=26.0e9)  # shear modulus - aluminum
+                      I11=5620.0e-12,    # area moment of inertia (twist)
+                      I22=1187.0e-12,    # area moment of inertia (wobble)
+                      I33=1124.0e-12,    # area moment of inertia (squish)
+                      young_mod=69.0e9,  # Young's modulus - aluminum
+                      shear_mod=26.0e9)  # shear modulus - aluminum
 
 # spoke section and material properties
 s_sec = bc.SpokeSection(2.0e-3,  # spoke diameter
-                     210e9)   # Young's modulus - steel
+                        210e9)   # Young's modulus - steel
 
 
-# --- 36-spoke cross-3 lacing --------------------------------
+# Create finite-element model from wheel
 fem = bc.BicycleWheelFEM(geom_36x3, r_sec, s_sec)
 
 # Create a rigid body for the hub nodes and constrain it
@@ -46,6 +45,5 @@ pp.savefig('def_36x3.png')
 f2 = pp.figure(2)
 soln.plot_spoke_tension(fig=f2)
 f2.gca().set_yticklabels([])
-
 
 pp.show()

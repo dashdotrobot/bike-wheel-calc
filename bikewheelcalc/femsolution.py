@@ -40,7 +40,7 @@ class FEMSolution:
 
         return u_rad, u_tan
 
-    def get_deformed_coords(self, node_id, scale_rad, scale_tan):
+    def get_deformed_coords(self, node_id, scale_rad=1.0, scale_tan=1.0):
         'Get coordinates of nodes in scaled deformed configuration.'
 
         # Allow array input for node_id and/or dof
@@ -49,7 +49,7 @@ class FEMSolution:
 
         x_def = np.array([])
         y_def = np.array([])
-        z_def = np.array([]) # TODO
+        z_def = np.array([])  # TODO
 
         u_rad, u_tan = self.get_polar_displacements(node_id)
 
@@ -65,6 +65,32 @@ class FEMSolution:
             y_def = np.append(y_def, x[1] + u[1])
 
         return x_def, y_def
+
+    def get_spoke_tension(self):
+        'Return a list of spoke tensions'
+        spoke_tension = [self.el_stress[e][0]
+                         for e in range(len(self.el_type))
+                         if self.el_type[e] == EL_SPOKE]
+
+        return np.array(spoke_tension)
+
+    def get_rim_stress(self, comp):
+        """Return a list of rim stresses, specified by comp.'
+
+        Stress components are identified as follows:
+        0 = normal tension
+        1 = in-plane shear
+        2 = out-of-plane shear
+        3 = torsion (twisting) moment
+        4 = out-of-plane (wobbling) moment
+        5 = in-plane (squashing) moment
+        """
+
+        rim_stress = [self.el_stress[e][comp]
+                      for e in range(len(self.el_type))
+                      if self.el_type[e] == EL_RIM]
+
+        return np.array(rim_stress)
 
     def plot_deformed_wheel(self, scale_rad=0.1, scale_tan=0.0):
         'Plot the exaggerated, deformed wheel shape.'
@@ -133,9 +159,12 @@ class FEMSolution:
         ax1 = fig.add_axes([0.1, 0.1, 0.8, 0.8], polar=True)
         ax1.set_xticklabels([])
 
+        # Get list of spoke tension
+        spoke_tension = self.get_spoke_tension()
+
         # drive-side spokes
-        angle = self.a_rim_nodes[np.where(self.s_hub_nodes == 1)[0]] - np.pi/2
-        tension = self.spokes_t[np.where(self.s_hub_nodes == 1)[0]]
+        angle = self.geom.a_rim_nodes[np.where(self.geom.s_hub_nodes == 1)[0]] - np.pi/2
+        tension = spoke_tension[np.where(self.geom.s_hub_nodes == 1)[0]]
 
         angle = np.append(angle, angle[0])
         tension = np.append(tension, tension[0])
@@ -144,8 +173,8 @@ class FEMSolution:
                             color='#69D2E7', linewidth=3, markersize=15)
 
         # non-drive-side spokes
-        angle = self.a_rim_nodes[np.where(self.s_hub_nodes == -1)[0]] - np.pi/2
-        tension = self.spokes_t[np.where(self.s_hub_nodes == -1)[0]]
+        angle = self.geom.a_rim_nodes[np.where(self.geom.s_hub_nodes == -1)[0]] - np.pi/2
+        tension = spoke_tension[np.where(self.geom.s_hub_nodes == -1)[0]]
 
         angle = np.append(angle, angle[0])
         tension = np.append(tension, tension[0])
@@ -168,9 +197,7 @@ class FEMSolution:
         self.z_nodes = fem.z_nodes.copy()
         self.type_nodes = fem.type_nodes.copy()
 
-        self.a_rim_nodes = fem.geom.a_rim_nodes.copy()
-        self.s_hub_nodes = fem.geom.s_hub_nodes.copy()
-
+        # Elements and connectivity
         self.el_type = fem.el_type.copy()
         self.el_n1 = fem.el_n1.copy()
         self.el_n2 = fem.el_n2.copy()
@@ -180,12 +207,5 @@ class FEMSolution:
         self.nodal_rxn = None
         self.dof_rxn = None
 
-        # internal forces at each node
-        self.spokes_t = []  # spoke tension
-
-        self.rim_t = []     # rim tension (hoop stress)
-        self.rim_v_i = []   # in-plane shear
-        self.rim_v_o = []   # out-of-plane shear
-        self.rim_m_s = []   # bending moment (squash)
-        self.rim_m_w = []   # bending moment (wobble)
-        self.rim_m_t = []   # torsion moment (twist)
+        # element stresses
+        self.el_stress = []
