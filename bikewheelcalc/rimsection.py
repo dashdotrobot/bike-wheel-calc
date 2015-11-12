@@ -10,3 +10,5 @@ class RimSection:
         self.shear_mod = shear_mod
         self.K2 = K2  # transverse shear constant
         self.K3 = K3  # transverse shear constant
+
+        self.density = 2700.0  # aluminum 6061
