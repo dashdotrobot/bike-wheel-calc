@@ -180,6 +180,8 @@ class WheelGeometry:
                 self.lace_cross(2)
             if args['pattern'] == 'cross3':
                 self.lace_cross(3)
+            if args['pattern'] == 'cross4':
+                self.lace_cross(4)
 
             if args['pattern'] == 'custom':
 
