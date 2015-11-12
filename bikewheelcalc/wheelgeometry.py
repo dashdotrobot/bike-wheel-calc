@@ -11,12 +11,13 @@ class WheelGeometry:
                 "  hub diameter (drive):{hd2:6.1f} mm\n"
                 "  hub width           :{hw1:6.1f} mm\n"
                 "  hub width (drive)   :{hw2:6.1f} mm\n"
-                "  number of spokes    :{ns:6d}\n").format(rd=self.d_rim*1000,
-                                                         hd1=self.d1_hub*1000,
-                                                         hd2=self.d2_hub*1000,
-                                                         hw1=self.w1_hub*1000,
-                                                         hw2=self.w2_hub*1000,
-                                                         ns=len(self.lace_hub_n))
+                "  number of spokes    :{ns:6d}\n")\
+            .format(rd=self.d_rim*1000,
+                    hd1=self.d1_hub*1000,
+                    hd2=self.d2_hub*1000,
+                    hw1=self.w1_hub*1000,
+                    hw2=self.w2_hub*1000,
+                    ns=len(self.lace_hub_n))
 
     def sort_spokes(self):
         'Sort spokes by rim node'
@@ -155,7 +156,7 @@ class WheelGeometry:
             # Increment to the next line
             return l
 
-        def keyword_lacing(l, f):
+        def keyword_spokes(l, f):
             # Default values
             args = {'pattern': 'default'}
 
@@ -170,19 +171,29 @@ class WheelGeometry:
                 else:
                     raise ValueError('Invalid parameter: {:s}'.format(key))
 
+            if args['pattern'] == 'radial':
+                self.lace_radial()
+
+            if args['pattern'] == 'cross1':
+                self.lace_cross(1)
+            if args['pattern'] == 'cross2':
+                self.lace_cross(2)
+            if args['pattern'] == 'cross3':
+                self.lace_cross(3)
+
             if args['pattern'] == 'custom':
 
                 # Read hub node positions from input file
                 l = f.readline()
 
-                self.lace_hub_n = np.array([], dtype=np.int32)
-                self.lace_rim_n = np.array([], dtype=np.int32)
+                # self.lace_hub_n = np.array([], dtype=np.int32)
+                # self.lace_rim_n = np.array([], dtype=np.int32)
 
                 while len(l) > 0:
 
                     l_lace = l.strip().split()
 
-                    if re.match('^\d+$', l_lace[0]):  # check if line is an integer
+                    if re.match('^\d+$', l_lace[0]):  # check if integer
                         i_node_hub = int(l_lace[0])
                         i_node_rim = int(l_lace[1])
 
@@ -212,7 +223,7 @@ class WheelGeometry:
                     elif l_args[0].lower() == 'hub':
                         l = keyword_hub(l, f)
                     elif l_args[0].lower() == 'lacing':
-                        l = keyword_lacing(l, f)
+                        l = keyword_spokes(l, f)
                     else:
                         # Nothing interesting on this line. Skip it.
                         l = f.readline()
@@ -223,7 +234,31 @@ class WheelGeometry:
             print('')
             raise
 
-    def add_spoke(self, hub_eyelet, rim_nipple):
+    def lace_radial(self):
+        n_spokes = self.n_rim_nodes
+        self.add_spoke(range(1, n_spokes+1), range(1, n_spokes+1))
+
+    def lace_cross(self, n_cross):
+        n_spokes = self.n_rim_nodes
+
+        # drive-side pulling
+        dpull_rim = np.arange(1, n_spokes+1, 4)
+        dpull_hub = dpull_rim - 2*n_cross
+        self.add_spoke(np.mod(dpull_hub - 1, n_spokes) + 1, dpull_rim)
+
+        dpush_rim = np.arange(3, n_spokes+1, 4)
+        dpush_hub = dpush_rim + 2*n_cross
+        self.add_spoke(np.mod(dpush_hub - 1, n_spokes) + 1, dpush_rim)
+
+        lpull_rim = np.arange(2, n_spokes+1, 4)
+        lpull_hub = lpull_rim - 2*n_cross
+        self.add_spoke(np.mod(lpull_hub - 1, n_spokes) + 1, lpull_rim)
+
+        lpush_rim = np.arange(4, n_spokes+1, 4)
+        lpush_hub = lpush_rim + 2*n_cross
+        self.add_spoke(np.mod(lpush_hub - 1, n_spokes) + 1, lpush_rim)
+
+    def add_spoke(self, hub_eyelet, rim_nipple, offset=0.0):
         """Add a spoke connecting hub_eyelet and rim_nipple. Inputs can be
            integers, or lists of equal length"""
 
@@ -241,6 +276,7 @@ class WheelGeometry:
             for h, r in zip(hub_eyelet, rim_nipple):
                 self.lace_hub_n = np.append(self.lace_hub_n, h)
                 self.lace_rim_n = np.append(self.lace_rim_n, r)
+                self.lace_offset = np.append(self.lace_offset, offset)
         else:
             print('*** Not enough hub eyelets or spoke nipples have been defined.')
 
@@ -299,6 +335,7 @@ class WheelGeometry:
 
         self.lace_hub_n = np.array([], dtype=np.int32)
         self.lace_rim_n = np.array([], dtype=np.int32)
+        self.lace_offset = np.array([], dtype=np.float)
 
         if hub_diam_drive is None:
             hub_diam_drive = hub_diam
