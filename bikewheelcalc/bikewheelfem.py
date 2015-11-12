@@ -201,12 +201,16 @@ class SpokeElement:
         node2_pos = self.fem.get_node_pos(self.nodes[1])
 
         # Tangent vector
-        e1 = node2_pos - node1_pos
+        e1 = (node2_pos + self.offset*self.side*np.array([0, 0, 1])) -\
+            node1_pos
         l = np.sqrt(e1.dot(e1))
         e1 = e1 / l  # convert to unit vector
         e2 = np.cross(e1, np.array([0, 0, 1]))
         e2 = e2 / np.sqrt(e2.dot(e2))
         e3 = np.cross(e1, e2)
+
+        # Calculate spoke-entering-rim angle
+        s_angle = np.pi/2 - np.arccos(np.dot(-e1, np.array([0, 0, 1])))
 
         # do not allow negative spoke tension (compression)
         tension = self.tension
@@ -219,19 +223,28 @@ class SpokeElement:
         k_t = tension / l
         k_b = 3 * self.section.young_mod*self.section.I / l**3
 
+        # Bar element stiffness matrix (no offset)
         k_spoke = np.matrix(np.zeros((12, 12)))
         k_spoke[0::6, 0::6] = k_n * np.matrix([[1, -1], [-1, 1]])
         k_spoke[1::6, 1::6] = (k_t + k_b) * np.matrix([[1, -1], [-1, 1]])
         k_spoke[2::6, 2::6] = (k_t + k_b) * np.matrix([[1, -1], [-1, 1]])
+
+        d = self.offset * self.side
+
+        # Add stiffness elements for spoke offset
+        k_spoke[0, 10] = k_n * d * np.cos(s_angle)  # sign flip
+        k_spoke[10, 0] = k_spoke[0, 10]
+
+        k_spoke[6, 10] = -k_n * d * np.cos(s_angle)   # sign flip
+        k_spoke[10, 6] = k_spoke[6, 10]
+
+        k_spoke[10, 10] = k_n * self.offset**2 * np.cos(s_angle)**2
 
         # rotation matrix to global coordinates
         Tg = np.matrix(np.zeros((3, 3)))
         Tg[:, 0] = e1.reshape((3, 1))
         Tg[:, 1] = e2.reshape((3, 1))
         Tg[:, 2] = e3.reshape((3, 1))
-        # Tg[3::, 3] = e1.reshape((3, 1))
-        # Tg[3::, 4] = e2.reshape((3, 1))
-        # Tg[3::, 5] = e3.reshape((3, 1))
 
         # Apply rotation matrix to each sub matrix
         for i in range(4):
@@ -256,7 +269,7 @@ class SpokeElement:
 
         # Generalized stress tuple:
         #  Tension
-        return (e1.dot(f_el[6:9]), )
+        return (e1.dot(f_el[6:9]) + self.tension, )
 
     def get_dofs(self):
         dof_n1 = 6*self.nodes[0] + np.arange(6)
@@ -265,12 +278,14 @@ class SpokeElement:
 
         return dofs
 
-    def __init__(self, fem, section, n1, n2, side):
+    def __init__(self, fem, section, n1, n2, side, offset=0.0):
         self.fem = fem
         self.section = section
         self.nodes = [n1, n2]
         self.side = side
-        self.tension = 0
+        self.tension = 0.0
+
+        self.offset = offset
 
         self.type = EL_SPOKE
 
@@ -300,6 +315,28 @@ class BicycleWheelFEM:
         'Return element IDs of all hub elements.'
         return np.where(self.el_type == EL_SPOKE)[0]
 
+    def calc_mass(self):
+        'Estimate the total mass of the wheel, in kg'
+
+        # Estimate total rim volume
+        vol_rim = self.rim_sec.area * np.pi * self.geom.d_rim
+        mass_rim = vol_rim * self.rim_sec.density
+
+        # Estimate total spoke volume
+        mass_spokes = 0
+        for s in self.get_spoke_elements():
+            e = self.elements[s]
+            node1_pos = self.get_node_pos(e.nodes[0])
+            node2_pos = self.get_node_pos(e.nodes[1])
+
+            # spoke length
+            e1 = (node2_pos + e.offset*np.array([0, 0, 1])) - node1_pos
+            l = np.sqrt(e1.dot(e1))
+
+            mass_spokes += l * e.section.area * e.section.density
+
+        return mass_rim + mass_spokes
+
     def calc_stiff_mat(self):
         'Calculate global stiffness matrix by element scatter algorithm.'
 
@@ -317,26 +354,11 @@ class BicycleWheelFEM:
         for el in self.elements:
 
             dofs = el.get_dofs()
-
-            node1_pos = self.get_node_pos(el.nodes[0])
-            node2_pos = self.get_node_pos(el.nodes[1])
-
             k_el = el.calc_el_stiff()
 
+            # Scatter to global matrix
             self.k_global[np.ix_(dofs, dofs)] = self.k_global[dofs][:, dofs] +\
                 k_el
-
-        # print "***"
-        # print "*** STIFFNESS MATRIX"
-        # print "***"
-        # for i in range(len(self.x_nodes)):
-            # for j in range(len(self.x_nodes)):
-                # print "{:d}, {:d}".format(i, j)
-                # submat = self.k_global[6*i:6*(i+1), 6*j:6*(j+1)]
-                # if np.any(submat):
-                    # print self.k_global[6*i:6*(i+1), 6*j:6*(j+1)]
-                # else:
-                    # print "ZEROS"
 
     def add_rigid_body(self, rigid_body):
 
@@ -597,20 +619,22 @@ class BicycleWheelFEM:
     def solve(self, pretension=None, verbose=True):
 
         self.verbose = verbose
-        self.el_pretension = np.zeros(len(self.el_type))
 
         if pretension is not None:
 
             # set initial pretension
-            self.el_pretension = pretension * np.ones(len(self.el_type))
+            # self.el_pretension = pretension * np.ones(len(self.el_type))
+            el_s = self.get_spoke_elements()
+            for e in el_s:
+                self.elements[e].tension = pretension
 
             # solve
             soln_1 = self.solve_iteration()
 
             # update spoke tensions
-            el_spokes = np.where(self.el_type == EL_SPOKE)
-            self.el_pretension[el_spokes] = self.el_pretension[el_spokes] + \
-                np.array(soln_1.get_spoke_tension())
+            # el_spokes = np.where(self.el_type == EL_SPOKE)
+            # self.el_pretension[el_spokes] = self.el_pretension[el_spokes] + \
+                # np.array(soln_1.get_spoke_tension())
 
         # solve with updated element tensions
         soln_2 = self.solve_iteration()
@@ -676,7 +700,12 @@ class BicycleWheelFEM:
             n1 = geom.lace_hub_n[e] + geom.n_rim_nodes - 1
             n2 = geom.lace_rim_n[e] - 1
             side = geom.s_hub_nodes[geom.lace_hub_n[e] - 1]
-            self.elements.append(SpokeElement(self, spoke_sec, n1, n2, side))
+
+            # TODO - Spoke offset
+            offset = geom.lace_offset[e]
+
+            self.elements.append(SpokeElement(self, spoke_sec, n1, n2,
+                                              side, offset))
             self.elements[-1].id = e + n_el
 
         # rigid bodies
