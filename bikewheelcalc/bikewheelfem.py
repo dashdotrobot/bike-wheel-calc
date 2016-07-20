@@ -329,6 +329,12 @@ class BicycleWheelFEM:
 
         return mass_rim + mass_spokes
 
+    def calc_spoke_stiff(self, n1, n2, s):
+        return np.zeros((12, 12))
+
+    def calc_rim_stiff(self, n1, n2):
+        return np.zeros((12, 12))
+
     def BROKEN_calc_stiff_mat(self):
         'Calculate global stiffness matrix by element scatter algorithm.'
 
@@ -343,10 +349,17 @@ class BicycleWheelFEM:
         self.k_global = np.matrix(np.zeros((6*self.n_nodes, 6*self.n_nodes)))
 
         # Loop over all elements and scatter to global K matrix
-        for el in self.elements:
+        for el in range(len(self.el_type)):
 
-            dofs = el.get_dofs()
-            k_el = el.calc_el_stiff()
+            n1 = self.el_n1[el]
+            n2 = self.el_n2[el]
+
+            dofs = np.concatenate((6*n1 + np.arange(6), 6*n2 + np.arange(6)))
+
+            if self.el_type[el] == EL_RIM:
+                k_el = self.calc_rim_stiff(n1, n2)
+            elif self.el_type[el] == EL_SPOKE:
+                k_el = self.calc_spoke_stiff(n1, n2, n1 - self.n_rim_nodes)
 
             # Scatter to global matrix
             self.k_global[np.ix_(dofs, dofs)] = self.k_global[dofs][:, dofs] +\
@@ -718,3 +731,4 @@ if True:
     print w
 
     fem = BicycleWheelFEM(w)
+    fem.BROKEN_calc_stiff_mat()
