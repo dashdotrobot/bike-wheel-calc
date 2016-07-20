@@ -9,11 +9,8 @@ import copy
 import re
 
 from femsolution import FEMSolution
-from rigidbody import RigidBody
-from spokesection import SpokeSection
-from rimsection import RimSection
-from wheelgeometry import WheelGeometry
 from helpers import *
+from bicycle_wheel import *
 
 EL_RIM = 1
 EL_SPOKE = 2
@@ -315,7 +312,7 @@ class BicycleWheelFEM:
         'Return element IDs of all hub elements.'
         return np.where(self.el_type == EL_SPOKE)[0]
 
-    def calc_mass(self):
+    def BROKEN_calc_mass(self):
         'Estimate the total mass of the wheel, in kg'
 
         # Estimate total rim volume
@@ -337,7 +334,7 @@ class BicycleWheelFEM:
 
         return mass_rim + mass_spokes
 
-    def calc_stiff_mat(self):
+    def BROKEN_calc_stiff_mat(self):
         'Calculate global stiffness matrix by element scatter algorithm.'
 
         if self.verbose:
@@ -539,7 +536,7 @@ class BicycleWheelFEM:
 
                 self.soln_updated = False
 
-    def solve_iteration(self):
+    def BROKEN_solve_iteration(self):
         'Solve elasticity equations for nodal displacements.'
 
         # Form augmented, reduced stiffness matrix
@@ -616,7 +613,7 @@ class BicycleWheelFEM:
 
         return soln
 
-    def solve(self, pretension=None, verbose=True):
+    def BROKEN_solve(self, pretension=None, verbose=True):
 
         self.verbose = verbose
 
@@ -629,84 +626,55 @@ class BicycleWheelFEM:
                 self.elements[e].tension = pretension
 
             # solve
-            soln_1 = self.solve_iteration()
+            soln1 = self.solve_iteration()
 
             # update spoke tensions
-            # el_spokes = np.where(self.el_type == EL_SPOKE)
-            # self.el_pretension[el_spokes] = self.el_pretension[el_spokes] + \
-                # np.array(soln_1.get_spoke_tension())
+            for e in el_s:
+                self.elements[e].tension = soln1.el_stress[e][0]
+                print soln1.el_stress[e][0]
 
         # solve with updated element tensions
         soln_2 = self.solve_iteration()
 
         return soln_2
 
-    def __init__(self, geom, rim_sec, spoke_sec, verbose=False):
+    def __init__(self, wheel, verbose=False):
 
         self.verbose = verbose
 
-        self.geom = geom
-        self.rim_sec = rim_sec
-        self.spoke_sec = spoke_sec
+        self.wheel = wheel
+
+        # Create a rim node at each unique spoke attachment point
+        theta_rim_nodes = set()
+        for s in self.wheel.spokes:
+            theta_rim_nodes.add(s.rim_pt[1])
+
+        theta_rim_nodes = sorted(list(theta_rim_nodes))
 
         # Rim nodes
-        self.x_nodes = geom.d_rim/2 * np.sin(geom.a_rim_nodes)
-        self.y_nodes = -geom.d_rim/2 * np.cos(geom.a_rim_nodes)
+        self.x_nodes = wheel.rim.radius * np.sin(theta_rim_nodes)
+        self.y_nodes = -wheel.rim.radius * np.cos(theta_rim_nodes)
         self.z_nodes = np.zeros(len(self.x_nodes))
         self.type_nodes = N_RIM * np.ones(len(self.x_nodes))
 
+        self.n_rim_nodes = len(self.type_nodes)
+
         # Hub nodes
-        diam_hub = np.array([geom.d1_hub*(geom.s_hub_nodes[i] < 0) +
-                             geom.d2_hub*(geom.s_hub_nodes[i] > 0)
-                             for i in range(geom.n_hub_nodes)])
-
-        width_hub = np.array([-geom.w1_hub*(geom.s_hub_nodes[i] < 0) +
-                              geom.w2_hub*(geom.s_hub_nodes[i] > 0)
-                              for i in range(geom.n_hub_nodes)])
-
-        self.x_nodes = np.append(self.x_nodes,
-                                 diam_hub/2 * np.sin(geom.a_hub_nodes))
-        self.y_nodes = np.append(self.y_nodes,
-                                 -diam_hub/2 * np.cos(geom.a_hub_nodes))
-        self.z_nodes = np.append(self.z_nodes, width_hub)
-        self.type_nodes = np.append(self.type_nodes,
-                                    N_HUB * np.ones(len(geom.a_hub_nodes)))
+        for s in self.wheel.spokes:
+            r_h = s.hub_pt[0]
+            theta_h = s.hub_pt[1]
+            z_h = s.hub_pt[2]
+            self.x_nodes = np.append(self.x_nodes, r_h*np.sin(theta_h))
+            self.y_nodes = np.append(self.y_nodes, -r_h*np.cos(theta_h))
+            self.z_nodes = np.append(self.z_nodes, z_h)
+            self.type_nodes = np.append(self.type_nodes, N_HUB)
 
         self.n_nodes = len(self.x_nodes)
 
-        # rim elements connectivity
-        self.el_n1 = np.array(range(geom.n_rim_nodes))
-        self.el_n2 = np.array(range(1, geom.n_rim_nodes) + [0])
-        self.el_type = EL_RIM * np.ones(geom.n_rim_nodes)
-
-        self.elements = []
-        for e in range(geom.n_rim_nodes):
-            n1 = self.el_n1[e]
-            n2 = self.el_n2[e]
-            self.elements.append(RimElement(self, rim_sec, n1, n2))
-            self.elements[-1].id = e
-
-        n_el = len(self.elements)
-
-        # spoke elements connectivity
-        self.el_n1 = np.concatenate((self.el_n1,
-                                     geom.lace_hub_n - 1 + geom.n_rim_nodes))
-        self.el_n2 = np.concatenate((self.el_n2, geom.lace_rim_n - 1))
-        self.el_type = np.concatenate((self.el_type,
-                                       EL_SPOKE*np.ones(len(geom.lace_hub_n))))
-
-        for e in range(len(geom.lace_hub_n)):
-            # subtract 1 to convert human-friendly ID to 0-based index
-            n1 = geom.lace_hub_n[e] + geom.n_rim_nodes - 1
-            n2 = geom.lace_rim_n[e] - 1
-            side = geom.s_hub_nodes[geom.lace_hub_n[e] - 1]
-
-            # TODO - Spoke offset
-            offset = geom.lace_offset[e]
-
-            self.elements.append(SpokeElement(self, spoke_sec, n1, n2,
-                                              side, offset))
-            self.elements[-1].id = e + n_el
+        # Create element connectivity matrix for rim nodes
+        self.el_n1 = np.arange(self.n_rim_nodes)
+        self.el_n2 = np.append(np.arange(1, self.n_rim_nodes), 0)
+        self.el_type = EL_RIM * np.ones(len(self.el_n1))
 
         # rigid bodies
         self.rigid = []
@@ -725,3 +693,22 @@ class BicycleWheelFEM:
 
         # solution arrays
         self.soln_updated = False
+
+# Testing code
+if True:
+
+    w = BicycleWheel()
+    w.hub = w.Hub(diam1=0.04, width1=0.025)
+    w.rim = w.Rim.general(radius=0.3,
+                          area=100e-6,
+                          I11=1000e-12,
+                          I22=1000e-12,
+                          I33=1000e-12,
+                          Iw=0.0,
+                          young_mod=69.0e9,
+                          shear_mod=26.0e9)
+    w.lace_radial(n_spokes=36, diameter=1.5e-3, young_mod=210e9, offset=0.0)
+
+    print w
+
+    fem = BicycleWheelFEM(w)
