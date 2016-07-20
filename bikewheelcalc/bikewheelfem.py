@@ -3,11 +3,6 @@
 'Finite-element solver for performing stress analysis on a bicycle wheel.'
 
 import numpy as np
-from scipy import interpolate
-import matplotlib.pyplot as pp
-import copy
-import re
-
 from femsolution import FEMSolution
 from helpers import *
 from bicycle_wheel import *
@@ -675,6 +670,17 @@ class BicycleWheelFEM:
         self.el_n1 = np.arange(self.n_rim_nodes)
         self.el_n2 = np.append(np.arange(1, self.n_rim_nodes), 0)
         self.el_type = EL_RIM * np.ones(len(self.el_n1))
+
+        # Add spoke elements
+        s_num = 0
+        for s in self.wheel.spokes:
+            r_node = np.where(s.rim_pt[1] == np.array(theta_rim_nodes))[0][0]
+
+            self.el_n1 = np.append(self.el_n1, self.n_rim_nodes + s_num)
+            self.el_n2 = np.append(self.el_n2, r_node)
+            self.el_type = np.append(self.el_type, EL_SPOKE)
+
+            s_num += 1
 
         # rigid bodies
         self.rigid = []
