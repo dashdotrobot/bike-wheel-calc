@@ -63,29 +63,29 @@ class RimElement:
         # Flexibility matrix for node 1 DOFs
         a = np.matrix(np.zeros((6, 6)))
 
-        a[0,0] = R*N/(2*sec.young_mod*sec.area) + sec.K2*R*B/(2*sec.shear_mod*sec.area) + C*R**3/(2*sec.young_mod*sec.I33)
-        a[0,1] = R*D/(2*sec.young_mod*sec.area) - sec.K2*R*D/(2*sec.shear_mod*sec.area) + S*R**3/(sec.young_mod*sec.I33)
+        a[0,0] = R*N/(2*E*A) + sec.K2*R*B/(2*G*A) + C*R**3/(2*E*sec.I33)
+        a[0,1] = R*D/(2*E*A) - sec.K2*R*D/(2*G*A) + S*R**3/(E*sec.I33)
         a[1,0] = a[0,1]
         
-        a[1,1] = B*R/(2*sec.young_mod*sec.area) + sec.K2*R*N/(2*sec.shear_mod*sec.area) + B*R**3/(2*sec.young_mod*sec.I33)
+        a[1,1] = B*R/(2*E*A) + sec.K2*R*N/(2*G*A) + B*R**3/(2*E*sec.I33)
 
-        a[0,5] = F*R**2/(sec.young_mod*sec.I33)
-        a[5,0] = F*R**2/(sec.young_mod*sec.I33)
-        a[1,5] = H*R**2/(sec.young_mod*sec.I33)
+        a[0,5] = F*R**2/(E*sec.I33)
+        a[5,0] = F*R**2/(E*sec.I33)
+        a[1,5] = H*R**2/(E*sec.I33)
         a[5,1] = a[1,5]
   
-        a[2,2] = sec.K3*R*phi0/(sec.shear_mod*sec.area) + C*R**3/(2*sec.shear_mod*sec.I11) + B*R**3/(2*sec.young_mod*sec.I22);
+        a[2,2] = sec.K3*R*phi0/(G*A) + C*R**3/(2*G*sec.I11) + B*R**3/(2*E*sec.I22);
         
-        a[2,3] = R**2/2*(B/(sec.young_mod*sec.I22) - V/(sec.shear_mod*sec.I11))
+        a[2,3] = R**2/2*(B/(E*sec.I22) - V/(G*sec.I11))
         a[3,2] = a[2,3]
-        a[2,4] = R**2/2*(2*S/(sec.shear_mod*sec.I11) - D/(sec.young_mod*sec.I22))
+        a[2,4] = R**2/2*(2*S/(G*sec.I11) - D/(E*sec.I22))
         a[4,2] = a[2,4]
-        a[3,3] = R/2*(N/(sec.shear_mod*sec.I11) + B/(sec.young_mod*sec.I22))
-        a[3,4] = D*R/2*(1/(sec.shear_mod*sec.I11) - 1/(sec.young_mod*sec.I22))
+        a[3,3] = R/2*(N/(G*sec.I11) + B/(E*sec.I22))
+        a[3,4] = D*R/2*(1/(G*sec.I11) - 1/(E*sec.I22))
         a[4,3] = a[3,4]
-        a[4,4] = R/2*(B/(sec.shear_mod*sec.I11) + N/(sec.young_mod*sec.I22))
+        a[4,4] = R/2*(B/(G*sec.I11) + N/(E*sec.I22))
         
-        a[5,5] = R*phi0/(sec.young_mod*sec.I33)
+        a[5,5] = R*phi0/(E*sec.I33)
 
         # Flexibility matrix for node 2 DOFs
         b = a.copy()
@@ -311,7 +311,7 @@ class BicycleWheelFEM:
         'Estimate the total mass of the wheel, in kg'
 
         # Estimate total rim volume
-        vol_rim = self.rim_sec.area * np.pi * self.geom.d_rim
+        vol_rim = self.rim_A * np.pi * self.geom.d_rim
         mass_rim = vol_rim * self.rim_sec.density
 
         # Estimate total spoke volume
@@ -333,7 +333,125 @@ class BicycleWheelFEM:
         return np.zeros((12, 12))
 
     def calc_rim_stiff(self, n1, n2):
-        return np.zeros((12, 12))
+        'Calculate stiffness matrix for a single rim element.'
+
+        # For details, see R. Palaninathan, P.S. Chandrasekharan,
+        # Computers and Structures, 4(21), pp. 663-669, 1985.
+
+        node1_pos = self.get_node_pos(n1)
+        node2_pos = self.get_node_pos(n2)
+
+        ref = np.array([0, 0, 0])  # reference point at wheel center
+
+        d = node2_pos - node1_pos  # beam orientation vector
+        r1 = node1_pos - ref       # radial vector to node 1
+        R = np.sqrt(r1.dot(r1))    # radius of curvature
+
+        # angle subtended by arc segment
+        phi0 = 2*np.arcsin(np.sqrt(d.dot(d)) / (2*R))
+
+        # local coordinate system
+        e1 = d / np.sqrt(d.dot(d))  # radial vector
+        e3 = np.array([0, 0, -1])   # axial vector
+        e2 = np.cross(e3, e1)       # tangential vector
+
+        # Material and section properties
+        # Beam warping is neglected
+        A = self.wheel.rim.area
+        E = self.wheel.rim.young_mod
+        G = self.wheel.rim.shear_mod
+        I11 = self.wheel.rim.I11
+        I22 = self.wheel.rim.I22
+        I33 = self.wheel.rim.I33
+        K2 = 0  # shear flexibility constant (0 = Euler-Bernoulli beam)
+        K3 = 0  # shear flexibility constant (0 = Euler-Bernoulli beam)
+
+        # Constants
+        N = phi0 + np.sin(2*phi0)/2
+        B = phi0 - np.sin(2*phi0)/2
+        C = 3*phi0 + np.sin(2*phi0)/2 - 4*np.sin(phi0)
+        S = 0.75 - np.cos(phi0) + np.cos(2*phi0)/4
+        F = np.sin(phi0) - phi0
+        H = np.cos(phi0) - 1
+        V = 2*np.sin(phi0) - phi0 - np.sin(2*phi0)/2
+        D = np.cos(2*phi0)/2 - 0.5
+
+        # Initialize stiffness matrix
+        k_r = np.matrix(np.zeros((12, 12)))
+
+        # Flexibility matrix for node 1 DOFs
+        a = np.matrix(np.zeros((6, 6)))
+
+        a[0, 0] = R*N/(2*E*A) + K2*R*B/(2*G*A) + C*R**3/(2*E*I33)
+        a[0, 1] = R*D/(2*E*A) - K2*R*D/(2*G*A) + S*R**3/(E*I33)
+        a[1, 0] = a[0, 1]
+
+        a[1, 1] = B*R/(2*E*A) + K2*R*N/(2*G*A) + B*R**3/(2*E*I33)
+
+        a[0, 5] = F*R**2/(E*I33)
+        a[5, 0] = F*R**2/(E*I33)
+        a[1, 5] = H*R**2/(E*I33)
+        a[5, 1] = a[1, 5]
+
+        a[2, 2] = K3*R*phi0/(G*A) + C*R**3/(2*G*I11) + B*R**3/(2*E*I22)
+
+        a[2, 3] = R**2/2*(B/(E*I22) - V/(G*I11))
+        a[3, 2] = a[2, 3]
+        a[2, 4] = R**2/2*(2*S/(G*I11) - D/(E*I22))
+        a[4, 2] = a[2, 4]
+        a[3, 3] = R/2*(N/(G*I11) + B/(E*I22))
+        a[3, 4] = D*R/2*(1/(G*I11) - 1/(E*I22))
+        a[4, 3] = a[3, 4]
+        a[4, 4] = R/2*(B/(G*I11) + N/(E*I22))
+
+        a[5, 5] = R*phi0/(E*I33)
+
+        # Flexibility matrix for node 2 DOFs
+        b = a.copy()
+        b[0, 1] = -a[0, 1]
+        b[1, 0] = -a[1, 0]
+        b[1, 5] = -a[1, 5]
+        b[5, 1] = -a[5, 1]
+        b[2, 4] = -a[2, 4]
+        b[4, 2] = -a[4, 2]
+        b[3, 4] = -a[3, 4]
+        b[4, 3] = -a[4, 3]
+
+        # Transformation matrix from node 1 -> node 2
+        al = np.cos(phi0)
+        bt = np.sin(phi0)
+
+        Tbar = np.matrix([[-al,  bt, 0, 0, 0, 0],
+                          [-bt, -al, 0, 0, 0, 0],
+                          [0,    0, -1, 0, 0, 0],
+                          [0, 0, R*(1-al), -al, bt, 0],
+                          [0, 0, -R*bt,    -bt, -al, 0],
+                          [R*(1-al), R*bt, 0, 0, 0, -1]])
+
+        # Transformation matrix from node 1 -> beam coordinates
+        Tb = np.matrix(np.zeros((6, 6)))
+        Tb[:3:, :3:] = np.matrix([[np.cos(phi0/2), -np.sin(phi0/2), 0],
+                                 [np.sin(phi0/2),  np.cos(phi0/2), 0],
+                                 [0,               0,              1]])
+        Tb[3::, 3::] = Tb[:3:, :3:]
+
+        # Transformation matrix from beam coordinates to global coordinates
+        Tg = np.matrix(np.zeros((6, 6)))
+        Tg[:3:, :3:] = np.matrix(np.vstack((e1, e2, e3)).T)
+        Tg[3::, 3::] = Tg[:3:, :3:]
+
+        # Assemble submatrices
+        k_r[:6:, :6:] = np.linalg.inv(a)      # K_II
+        k_r[6::, 6::] = np.linalg.inv(b)      # K_JJ
+        k_r[6::, :6:] = Tbar * k_r[:6:, :6:]  # K_JI
+
+        k_r[:6:, :6:] = Tg*Tb   * k_r[:6:, :6:] * Tb.T*Tg.T
+        k_r[6::, 6::] = Tg*Tb.T * k_r[6::, 6::] * Tb  *Tg.T
+        k_r[6::, :6:] = Tg*Tb.T * k_r[6::, :6:] * Tb.T*Tg.T
+        k_r[:6:, 6::] = k_r[6::,:6:].T      # K_IJ (symm.)
+
+        return k_r
+
 
     def BROKEN_calc_stiff_mat(self):
         'Calculate global stiffness matrix by element scatter algorithm.'
@@ -731,4 +849,4 @@ if True:
     print w
 
     fem = BicycleWheelFEM(w)
-    fem.BROKEN_calc_stiff_mat()
+    print fem.calc_rim_stiff(0, 1)
