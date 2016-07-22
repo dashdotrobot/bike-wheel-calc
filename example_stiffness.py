@@ -16,15 +16,15 @@ geom.append(bc.WheelGeometry(wheel_file='wheel_36_crowsfoot.txt'))
 
 # Rim section and material properties
 r_sec = bc.RimSection(area=82.0e-6,      # cross-sectional area
-                   I11=5620.0e-12,    # area moment of inertia (twist)
-                   I22=1187.0e-12,    # area moment of inertia (wobble)
-                   I33=1124.0e-12,    # area moment of inertia (squish)
-                   young_mod=69.0e9,  # Young's modulus - aluminum
-                   shear_mod=26.0e9)  # shear modulus - aluminum
+                      I11=5620.0e-12,    # area moment of inertia (twist)
+                      I22=1187.0e-12,    # area moment of inertia (wobble)
+                      I33=1124.0e-12,    # area moment of inertia (squish)
+                      young_mod=69.0e9,  # Young's modulus - aluminum
+                      shear_mod=26.0e9)  # shear modulus - aluminum
 
 # spoke section and material properties
 s_sec = bc.SpokeSection(2.0e-3,  # spoke diameter
-                     210e9)   # Young's modulus - steel
+                        210e9)   # Young's modulus - steel
 
 # Rotational stiffness is the ratio of applied torque to hub twist in degrees.
 # This can be calculated by twisting the hub a fixed amount and measuring the
