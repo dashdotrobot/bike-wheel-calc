@@ -330,7 +330,66 @@ class BicycleWheelFEM:
         return mass_rim + mass_spokes
 
     def calc_spoke_stiff(self, n1, n2, s):
-        return np.zeros((12, 12))
+        'Calculate spoke stiffness matrix.'
+
+        nip_pt = pol2rect(s.rim_pt)     # spoke nipple
+        hub_pt = pol2rect(s.hub_pt)     # hub eyelet
+        rim_pt = self.get_node_pos(n2)  # point on rim centroid
+
+        # Beam coordinate system
+        e1 = hub_pt - nip_pt                    # tangent vector
+        l = np.sqrt(e1.dot(e1))
+        e1 = e1 / l
+        e2 = np.cross(e1, np.array([0, 0, 1]))  # normal vector
+        e2 = e2 / np.sqrt(e2.dot(e2))
+        e3 = np.cross(e1, e2)                   # second normal vector
+
+        # do not allow negative spoke tension (compression)
+        # TODO
+
+        # axial stiffness (normal)
+        k_n = s.EA / l
+
+        # tension stiffness (transverse)
+        # TODO
+        k_t = 0.0 / l
+
+        # bending stiffness (transverse)
+        # Generally, bending stiffness is negligible. It is only present for
+        # numerical stability in the case of radial spokes (vanishing torsional
+        # stiffness).
+        k_b = 3 * s.EA * (s.diameter**2 / 16) / l**3
+
+        # Bar element stiffness matrix (FORCES ONLY) in beam coordinates
+        k_f = np.matrix(np.zeros((6, 6)))
+        k_f[0::3, 0::3] = k_n * np.matrix([[1, -1], [-1, 1]])
+        k_f[1::3, 1::3] = (k_t + k_b) * np.matrix([[1, -1], [-1, 1]])
+        k_f[2::3, 2::3] = (k_t + k_b) * np.matrix([[1, -1], [-1, 1]])
+
+        
+
+        # Add stiffness elements for spoke offset
+        k_spoke[0, 10] = k_n * d * np.cos(s_angle)  # sign flip
+        k_spoke[10, 0] = k_spoke[0, 10]
+
+        k_spoke[6, 10] = -k_n * d * np.cos(s_angle)   # sign flip
+        k_spoke[10, 6] = k_spoke[6, 10]
+
+        k_spoke[10, 10] = k_n * self.offset**2 * np.cos(s_angle)**2
+
+        # rotation matrix to global coordinates
+        Tg = np.matrix(np.zeros((3, 3)))
+        Tg[:, 0] = e1.reshape((3, 1))
+        Tg[:, 1] = e2.reshape((3, 1))
+        Tg[:, 2] = e3.reshape((3, 1))
+
+        # Apply rotation matrix to each sub matrix
+        for i in range(4):
+            for j in range(4):
+                k_spoke[3*i:3*(i+1), 3*j:3*(j+1)] = \
+                    Tg * k_spoke[3*i:3*(i+1), 3*j:3*(j+1)] * Tg.T
+
+        return k_spoke
 
     def calc_rim_stiff(self, n1, n2):
         'Calculate stiffness matrix for a single rim element.'
@@ -452,7 +511,6 @@ class BicycleWheelFEM:
 
         return k_r
 
-
     def BROKEN_calc_stiff_mat(self):
         'Calculate global stiffness matrix by element scatter algorithm.'
 
@@ -477,7 +535,8 @@ class BicycleWheelFEM:
             if self.el_type[el] == EL_RIM:
                 k_el = self.calc_rim_stiff(n1, n2)
             elif self.el_type[el] == EL_SPOKE:
-                k_el = self.calc_spoke_stiff(n1, n2, n1 - self.n_rim_nodes)
+                s = self.wheel.spokes[n1 - self.n_rim_nodes]
+                k_el = self.calc_spoke_stiff(n1, n2, s)
 
             # Scatter to global matrix
             self.k_global[np.ix_(dofs, dofs)] = self.k_global[dofs][:, dofs] +\
@@ -849,4 +908,4 @@ if True:
     print w
 
     fem = BicycleWheelFEM(w)
-    print fem.calc_rim_stiff(0, 1)
+    print fem.calc_spoke_stiff(0, 36, 0)
