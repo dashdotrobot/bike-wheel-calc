@@ -336,10 +336,6 @@ class BicycleWheelFEM:
         hub_pt = pol2rect(s.hub_pt)     # hub eyelet
         rim_pt = self.get_node_pos(n2)  # point on rim centroid
 
-        print hub_pt
-        print nip_pt
-        print rim_pt
-
         # Beam coordinate system
         e1 = hub_pt - nip_pt                    # tangent vector
         l = np.sqrt(e1.dot(e1))
@@ -518,7 +514,7 @@ class BicycleWheelFEM:
 
         return k_r
 
-    def BROKEN_calc_stiff_mat(self):
+    def calc_stiff_mat(self):
         'Calculate global stiffness matrix by element scatter algorithm.'
 
         if self.verbose:
@@ -915,6 +911,6 @@ if True:
     print w
 
     fem = BicycleWheelFEM(w)
-    print fem.el_n1
-    print fem.el_n2
-    print fem.calc_spoke_stiff(36, 0, fem.wheel.spokes[0])
+
+    fem.calc_stiff_mat()
+    print fem.k_global
