@@ -134,20 +134,43 @@ class BicycleWheel:
                                np.sin(self.phi)])
 
     def lace_radial(self, n_spokes, diameter, young_mod, offset=0.0):
+        'Generate spokes in a radial spoke pattern.'
 
         # Remove any existing spokes
         self.spokes = []
 
         for s in range(n_spokes):
             theta = 2 * np.pi / n_spokes * s
-            side = 2 * ((s + 1) % 2) - 1
+            side = 2*((s + 1) % 2) - 1
 
-            rim_pt = (self.rim.radius, theta, side * offset)
+            rim_pt = (self.rim.radius, theta, side*offset)
 
             if side == 1:
                 hub_pt = (self.hub.radius1, theta, self.hub.width1)
             else:
                 hub_pt = (self.hub.radius2, theta, -self.hub.width2)
+
+            spoke = self.Spoke(rim_pt, hub_pt, diameter, young_mod)
+            self.spokes.append(spoke)
+
+    def lace_cross(self, n_spokes, n_cross, diameter, young_mod, offset=0.0):
+        'Generate spokes in a "cross" pattern with n_cross crossings.'
+
+        # Remove any existing spokes
+        self.spokes = []
+
+        for s in range(n_spokes):
+            theta_rim = 2*np.pi/n_spokes * s
+            side = 2*((s + 1) % 2) - 1
+            s_dir = 2*((s % 4) < 2) - 1
+
+            rim_pt = (self.rim.radius, theta_rim, side*offset)
+
+            theta_hub = theta_rim + 2*n_cross*s_dir * (2*np.pi/n_spokes)
+            if side == 1:
+                hub_pt = (self.hub.radius1, theta_hub, self.hub.width1)
+            else:
+                hub_pt = (self.hub.radius2, theta_hub, -self.hub.width2)
 
             spoke = self.Spoke(rim_pt, hub_pt, diameter, young_mod)
             self.spokes.append(spoke)
