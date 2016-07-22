@@ -68,7 +68,7 @@ class FEMSolution:
 
     def get_spoke_tension(self):
         'Return a list of spoke tensions'
-        spoke_tension = [self.el_stress[e][0]
+        spoke_tension = [self.el_stress[e][0] + self.el_prestress[e]
                          for e in range(len(self.el_type))
                          if self.el_type[e] == EL_SPOKE]
 
@@ -133,7 +133,8 @@ class FEMSolution:
                 self.wheel.rim.radius * np.sin(theta_ii), 'k:')
 
         # Plot deformed rim
-        pp.plot(r_def_ii * np.cos(theta_def_ii), r_def_ii * np.sin(theta_def_ii), 'k', linewidth=2.0)
+        pp.plot(r_def_ii * np.cos(theta_def_ii),
+                r_def_ii * np.sin(theta_def_ii), 'k', linewidth=2.0)
 
         # Plot spokes in deformed configuration
         for e in np.where(self.el_type == EL_SPOKE)[0]:
@@ -215,4 +216,5 @@ class FEMSolution:
         self.dof_rxn = None
 
         # element stresses
+        self.el_prestress = []
         self.el_stress = []

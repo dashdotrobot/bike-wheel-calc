@@ -8,6 +8,7 @@ from helpers import *
 from bicycle_wheel import *
 
 from rigidbody import *
+import matplotlib.pyplot as pp
 
 EL_RIM = 1
 EL_SPOKE = 2
@@ -331,8 +332,10 @@ class BicycleWheelFEM:
 
         return mass_rim + mass_spokes
 
-    def calc_spoke_stiff(self, n1, n2, s):
+    def calc_spoke_stiff(self, el_id, s):
         'Calculate spoke stiffness matrix.'
+
+        n2 = self.el_n2[el_id]
 
         nip_pt = pol2rect(s.rim_pt)     # spoke nipple
         hub_pt = pol2rect(s.hub_pt)     # hub eyelet
@@ -353,8 +356,7 @@ class BicycleWheelFEM:
         k_n = s.EA / l
 
         # tension stiffness (transverse)
-        # TODO
-        k_t = 0.0 / l
+        k_t = self.el_prestress[el_id] / l
 
         # bending stiffness (transverse)
         # Generally, bending stiffness is negligible. It is only present for
@@ -396,8 +398,11 @@ class BicycleWheelFEM:
 
         return k_spoke
 
-    def calc_rim_stiff(self, n1, n2):
+    def calc_rim_stiff(self, el_id):
         'Calculate stiffness matrix for a single rim element.'
+
+        n1 = self.el_n1[el_id]
+        n2 = self.el_n2[el_id]
 
         # For details, see R. Palaninathan, P.S. Chandrasekharan,
         # Computers and Structures, 4(21), pp. 663-669, 1985.
@@ -538,14 +543,40 @@ class BicycleWheelFEM:
             dofs = np.concatenate((6*n1 + np.arange(6), 6*n2 + np.arange(6)))
 
             if self.el_type[el] == EL_RIM:
-                k_el = self.calc_rim_stiff(n1, n2)
+                k_el = self.calc_rim_stiff(el)
             elif self.el_type[el] == EL_SPOKE:
                 s = self.wheel.spokes[n1 - self.n_rim_nodes]
-                k_el = self.calc_spoke_stiff(n1, n2, s)
+                k_el = self.calc_spoke_stiff(el, s)
 
             # Scatter to global matrix
             self.k_global[np.ix_(dofs, dofs)] = self.k_global[dofs][:, dofs] +\
                 k_el
+
+    def calc_spoke_stress(self, el_id, u):
+        'Calculate tension in spoke.'
+
+        n1 = self.el_n1[el_id]
+        n2 = self.el_n2[el_id]
+
+        s_num = self.el_s_num[el_id]
+        s = self.wheel.spokes[s_num]  # spoke object
+
+        # spoke vector
+        nip_pt = pol2rect(s.rim_pt)     # spoke nipple
+        hub_pt = pol2rect(s.hub_pt)     # hub eyelet
+        e1 = nip_pt - hub_pt
+        e1 = e1 / np.sqrt(e1.dot(e1))
+
+        dofs = np.concatenate((6*n1 + np.arange(6), 6*n2 + np.arange(6)))
+
+        k_spoke = self.calc_spoke_stiff(el_id, s)
+        u_el = u[dofs]
+
+        f_el = np.array(k_spoke.dot(u_el)).flatten()
+
+        # Generalized stress tuple:
+        #  Tension
+        return (e1.dot(f_el[6:9]), )
 
     def add_rigid_body(self, rigid_body):
 
@@ -787,7 +818,9 @@ class BicycleWheelFEM:
 
         # nodal reaction forces
         rxn_red = np.array(k_red.dot(u_red) - f_aug).flatten()
-        dof_rxn_red = [6*self.node_r_id[i/6] + i % 6 for i in range(6*self.n_nodes) if self.bc_const[i]]
+        dof_rxn_red = [6*self.node_r_id[i/6] + i % 6
+                       for i in range(6*self.n_nodes)
+                       if self.bc_const[i]]
         dof_rxn = np.where(self.bc_const)[0]
         rxn = rxn_red[dof_rxn_red]
 
@@ -795,8 +828,13 @@ class BicycleWheelFEM:
         soln.nodal_rxn[dof_rxn / 6, dof_rxn % 6] = rxn
 
         # TODO Calculate element stresses
-        # for el in self.elements:
-            # soln.el_stress.append(el.calc_stresses(u))
+        soln.el_prestress = self.el_prestress
+        for el in range(len(self.el_type)):
+            if self.el_type[el] == EL_SPOKE:
+                soln.el_stress.append(self.calc_spoke_stress(el, u))
+            else:
+                # TODO calculate rim stresses
+                soln.el_stress.append((0.0,))
 
         if self.verbose:
             print('# ---------------------------------------')
@@ -810,21 +848,23 @@ class BicycleWheelFEM:
         if pretension is not None:
 
             # set initial pretension
-            # self.el_pretension = pretension * np.ones(len(self.el_type))
-            el_s = self.get_spoke_elements()
-            for e in el_s:
-                self.elements[e].tension = pretension
+            for e in self.get_spoke_elements():
+                self.el_prestress[e] = pretension
 
             # solve
             soln1 = self.solve_iteration()
 
             # update spoke tensions
-            for e in el_s:
-                self.elements[e].tension = soln1.el_stress[e][0]
-                print soln1.el_stress[e][0]
+            for e in self.get_spoke_elements():
+                self.el_prestress[e] = self.el_prestress[e] +\
+                    soln1.el_stress[e][0]
 
         # solve with updated element tensions
         soln_2 = self.solve_iteration()
+
+        # reset spoke prestress to initial prestress
+        for e in self.get_spoke_elements():
+            self.el_prestress[e] = pretension
 
         return soln_2
 
@@ -865,17 +905,19 @@ class BicycleWheelFEM:
         self.el_n1 = np.arange(self.n_rim_nodes)
         self.el_n2 = np.append(np.arange(1, self.n_rim_nodes), 0)
         self.el_type = EL_RIM * np.ones(len(self.el_n1))
+        self.el_s_num = np.zeros(len(self.el_n1), dtype=np.int)
 
         # Add spoke elements
-        s_num = 0
-        for s in self.wheel.spokes:
+        for s_num, s in enumerate(self.wheel.spokes):
             r_node = np.where(s.rim_pt[1] == np.array(theta_rim_nodes))[0][0]
 
             self.el_n1 = np.append(self.el_n1, self.n_rim_nodes + s_num)
             self.el_n2 = np.append(self.el_n2, r_node)
             self.el_type = np.append(self.el_type, EL_SPOKE)
+            self.el_s_num = np.append(self.el_s_num, s_num)
 
-            s_num += 1
+        # Spoke tension vector
+        self.el_prestress = np.zeros(len(self.el_type))
 
         # rigid bodies
         self.rigid = []
@@ -896,7 +938,7 @@ class BicycleWheelFEM:
         self.soln_updated = False
 
 # Testing code
-if True:
+if False:
 
     w = BicycleWheel()
     w.hub = w.Hub(diam1=0.04, width1=0.025)
@@ -908,7 +950,10 @@ if True:
                           Iw=0.0,
                           young_mod=69.0e9,
                           shear_mod=26.0e9)
-    w.lace_radial(n_spokes=36, diameter=1.5e-3, young_mod=210e9, offset=0.0)
+
+    # w.lace_radial(n_spokes=36, diameter=1.5e-3, young_mod=210e9, offset=0.0)
+    w.lace_cross(n_spokes=36, n_cross=3, diameter=1.5e-3,
+                 young_mod=210e9, offset=0.0)
 
     fem = BicycleWheelFEM(w, verbose=True)
 
@@ -918,8 +963,11 @@ if True:
 
     # Calculate radial stiffness. Apply an upward force to the bottom node
     fem.add_constraint(r_hub.node_id, range(6))
-    fem.add_force(0, 1, 1)
+    fem.add_force(0, 1, 500)
 
-    soln = fem.solve()
+    soln = fem.solve(pretension=1000)
 
-    print soln.nodal_disp
+    print soln.get_spoke_tension()
+
+    soln.plot_deformed_wheel()
+    pp.show()
