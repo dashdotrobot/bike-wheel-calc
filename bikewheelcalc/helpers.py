@@ -21,3 +21,7 @@ def interp_periodic(x, y, xx, period=2*np.pi):
     return interpolate.splev(xx, f_spline)
 
 
+def pol2rect(p):
+    'Convert a point from polar coordinates to Cartesian coordinates.'
+
+    return np.array([p[0]*np.sin(p[1]), p[0]*np.cos(p[1]), p[2]])
