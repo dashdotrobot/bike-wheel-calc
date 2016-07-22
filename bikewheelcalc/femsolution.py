@@ -101,17 +101,24 @@ class FEMSolution:
 
         # Scale the largest displacement to a percentage of the rim radius
         if max(np.abs(u_rad)) > 0:
-            scale_rad = self.geom.d_rim/2 / max(np.abs(u_rad)) * scale_rad
-            scale_tan = self.geom.d_rim/2 / max(np.abs(u_rad)) * scale_tan
+            scale_rad = self.wheel.rim.radius / max(np.abs(u_rad)) * scale_rad
+            scale_tan = self.wheel.rim.radius / max(np.abs(u_rad)) * scale_tan
         else:
             scale_rad = 0
             scale_tan = 0
 
-        theta = self.geom.a_rim_nodes - np.pi/2
+        # Angular positions of spoke nipples (x-axis is theta=0)
+        theta = np.array([rect2pol(np.array([self.x_nodes[i],
+                                             self.y_nodes[i],
+                                             self.z_nodes[i]]))[1]
+                          for i in range(len(self.x_nodes))
+                          if self.type_nodes[i] == N_RIM])
+
+        theta = np.mod(theta + 2*np.pi, 2*np.pi) - np.pi/2
 
         # Calculate coordinates in deformed configuration
-        theta_def = theta + scale_tan * u_tan / (self.geom.d_rim / 2)
-        r_def = (self.geom.d_rim / 2) + scale_rad * u_rad
+        theta_def = theta + scale_tan * u_tan / (self.wheel.rim.radius)
+        r_def = (self.wheel.rim.radius) + scale_rad * u_rad
 
         theta_ii = np.linspace(-np.pi/2, 3*np.pi/2, 1000)
 
@@ -122,8 +129,8 @@ class FEMSolution:
         r_def_ii = interp_periodic(theta, r_def, theta_ii)
 
         # Plot undeformed rim
-        pp.plot(self.geom.d_rim/2 * np.cos(theta_ii),
-                self.geom.d_rim/2 * np.sin(theta_ii), 'k:')
+        pp.plot(self.wheel.rim.radius * np.cos(theta_ii),
+                self.wheel.rim.radius * np.sin(theta_ii), 'k:')
 
         # Plot deformed rim
         pp.plot(r_def_ii * np.cos(theta_def_ii), r_def_ii * np.sin(theta_def_ii), 'k', linewidth=2.0)
@@ -140,8 +147,8 @@ class FEMSolution:
 
         # Axis properties
         ax = pp.gca()
-        ax.set_ylim([-1.2*self.geom.d_rim/2, 1.2*self.geom.d_rim/2])
-        ax.set_xlim([-1.2*self.geom.d_rim/2, 1.2*self.geom.d_rim/2])
+        ax.set_ylim([-1.2*self.wheel.rim.radius, 1.2*self.wheel.rim.radius])
+        ax.set_xlim([-1.2*self.wheel.rim.radius, 1.2*self.wheel.rim.radius])
 
         ax.set_aspect('equal', 'datalim')
 
