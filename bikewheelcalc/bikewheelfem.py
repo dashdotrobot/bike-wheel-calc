@@ -336,6 +336,10 @@ class BicycleWheelFEM:
         hub_pt = pol2rect(s.hub_pt)     # hub eyelet
         rim_pt = self.get_node_pos(n2)  # point on rim centroid
 
+        print hub_pt
+        print nip_pt
+        print rim_pt
+
         # Beam coordinate system
         e1 = hub_pt - nip_pt                    # tangent vector
         l = np.sqrt(e1.dot(e1))
@@ -361,21 +365,10 @@ class BicycleWheelFEM:
         k_b = 3 * s.EA * (s.diameter**2 / 16) / l**3
 
         # Bar element stiffness matrix (FORCES ONLY) in beam coordinates
-        k_f = np.matrix(np.zeros((6, 6)))
-        k_f[0::3, 0::3] = k_n * np.matrix([[1, -1], [-1, 1]])
-        k_f[1::3, 1::3] = (k_t + k_b) * np.matrix([[1, -1], [-1, 1]])
-        k_f[2::3, 2::3] = (k_t + k_b) * np.matrix([[1, -1], [-1, 1]])
-
-        
-
-        # Add stiffness elements for spoke offset
-        k_spoke[0, 10] = k_n * d * np.cos(s_angle)  # sign flip
-        k_spoke[10, 0] = k_spoke[0, 10]
-
-        k_spoke[6, 10] = -k_n * d * np.cos(s_angle)   # sign flip
-        k_spoke[10, 6] = k_spoke[6, 10]
-
-        k_spoke[10, 10] = k_n * self.offset**2 * np.cos(s_angle)**2
+        k_spoke = np.matrix(np.zeros((12, 12)))
+        k_spoke[0::6, 0::6] = k_n * np.matrix([[1, -1], [-1, 1]])
+        k_spoke[1::6, 1::6] = (k_t + k_b) * np.matrix([[1, -1], [-1, 1]])
+        k_spoke[2::6, 2::6] = (k_t + k_b) * np.matrix([[1, -1], [-1, 1]])
 
         # rotation matrix to global coordinates
         Tg = np.matrix(np.zeros((3, 3)))
@@ -388,6 +381,20 @@ class BicycleWheelFEM:
             for j in range(4):
                 k_spoke[3*i:3*(i+1), 3*j:3*(j+1)] = \
                     Tg * k_spoke[3*i:3*(i+1), 3*j:3*(j+1)] * Tg.T
+
+        # Transformation matrices to account for spoke offset
+        r = nip_pt - rim_pt
+        Omega_r = skew_symm(r)
+
+        # Right-multiply k_spoke by C to transform from u_nip -> u_rim
+        for i in range(4):
+            k_spoke[3*i:3*(i+1), 9::] = k_spoke[3*i:3*(i+1), 9::] - \
+                Omega_r * k_spoke[3*i:3*(i+1), 6:9]
+
+        # Left-multiply k_spoke by B to transform from f_nip -> f_rim
+        for i in range(4):
+            k_spoke[9::, 3*i:3*(i+1)] = k_spoke[9::, 3*i:3*(i+1)] - \
+                Omega_r * k_spoke[6:9, 3*i:3*(i+1)]
 
         return k_spoke
 
@@ -908,4 +915,6 @@ if True:
     print w
 
     fem = BicycleWheelFEM(w)
-    print fem.calc_spoke_stiff(0, 36, 0)
+    print fem.el_n1
+    print fem.el_n2
+    print fem.calc_spoke_stiff(36, 0, fem.wheel.spokes[0])
