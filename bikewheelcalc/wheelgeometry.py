@@ -1,6 +1,7 @@
 import numpy as np
 import re
 
+
 class WheelGeometry:
     'Geometric parameters including size and lacing pattern'
 
@@ -173,7 +174,6 @@ class WheelGeometry:
 
             if args['pattern'] == 'radial':
                 self.lace_radial()
-
             if args['pattern'] == 'cross1':
                 self.lace_cross(1)
             if args['pattern'] == 'cross2':
@@ -182,7 +182,6 @@ class WheelGeometry:
                 self.lace_cross(3)
             if args['pattern'] == 'cross4':
                 self.lace_cross(4)
-
             if args['pattern'] == 'custom':
 
                 # Read hub node positions from input file
@@ -199,8 +198,7 @@ class WheelGeometry:
                         i_node_hub = int(l_lace[0])
                         i_node_rim = int(l_lace[1])
 
-                        self.lace_hub_n = np.append(self.lace_hub_n, i_node_hub)
-                        self.lace_rim_n = np.append(self.lace_rim_n, i_node_rim)
+                        self.add_spoke(i_node_hub, i_node_rim)
 
                         l = f.readline()
                     elif l_lace[0][0] == '#':
