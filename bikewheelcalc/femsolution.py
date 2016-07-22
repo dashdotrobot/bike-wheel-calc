@@ -190,7 +190,7 @@ class FEMSolution:
     def __init__(self, fem):
         self.updated = False
 
-        self.geom = copy.copy(fem.geom)
+        self.wheel = copy.copy(fem.wheel)
 
         self.x_nodes = fem.x_nodes.copy()
         self.y_nodes = fem.y_nodes.copy()

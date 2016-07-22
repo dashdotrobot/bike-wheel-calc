@@ -7,6 +7,8 @@ from femsolution import FEMSolution
 from helpers import *
 from bicycle_wheel import *
 
+from rigidbody import *
+
 EL_RIM = 1
 EL_SPOKE = 2
 N_RIM = 1
@@ -724,7 +726,7 @@ class BicycleWheelFEM:
 
                 self.soln_updated = False
 
-    def BROKEN_solve_iteration(self):
+    def solve_iteration(self):
         'Solve elasticity equations for nodal displacements.'
 
         # Form augmented, reduced stiffness matrix
@@ -792,16 +794,16 @@ class BicycleWheelFEM:
         soln.nodal_rxn = np.zeros((self.n_nodes, 6))
         soln.nodal_rxn[dof_rxn / 6, dof_rxn % 6] = rxn
 
-        # Calculate element stresses
-        for el in self.elements:
-            soln.el_stress.append(el.calc_stresses(u))
+        # TODO Calculate element stresses
+        # for el in self.elements:
+            # soln.el_stress.append(el.calc_stresses(u))
 
         if self.verbose:
             print('# ---------------------------------------')
 
         return soln
 
-    def BROKEN_solve(self, pretension=None, verbose=True):
+    def solve(self, pretension=None, verbose=True):
 
         self.verbose = verbose
 
@@ -908,9 +910,16 @@ if True:
                           shear_mod=26.0e9)
     w.lace_radial(n_spokes=36, diameter=1.5e-3, young_mod=210e9, offset=0.0)
 
-    print w
+    fem = BicycleWheelFEM(w, verbose=True)
 
-    fem = BicycleWheelFEM(w)
+    # Create a rigid body to constrain the hub nodes
+    r_hub = RigidBody('hub', [0, 0, 0], fem.get_hub_nodes())
+    fem.add_rigid_body(r_hub)
 
-    fem.calc_stiff_mat()
-    print fem.k_global
+    # Calculate radial stiffness. Apply an upward force to the bottom node
+    fem.add_constraint(r_hub.node_id, range(6))
+    fem.add_force(0, 1, 1)
+
+    soln = fem.solve()
+
+    print soln.nodal_disp
