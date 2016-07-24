@@ -12,31 +12,29 @@ N_REF = 3
 
 
 class FEMSolution:
-    el_rim = 1
-    el_spoke = 2
 
     def get_polar_displacements(self, node_id):
-        'Convert nodal displacements to polar form'
+        'Convert nodal displacements to polar form.'
 
-        # Allow array input for node_id and/or dof
+        # Allow array input for node_id
         if not hasattr(node_id, '__iter__'):
             node_id = [node_id]
 
         u_rad = np.array([])
         u_tan = np.array([])
+        u_z = np.array([])
 
         for n in node_id:
 
             x = np.array([self.x_nodes[n], self.y_nodes[n], self.z_nodes[n]])
-            n_tan = np.cross(np.array([0,0,1]),x)
+            n_tan = np.cross(np.array([0, 0, 1]), x)
 
             u_rim = self.nodal_disp[n, 0:3]
 
             u_rad = np.append(u_rad, u_rim.dot(x) / np.sqrt(x.dot(x)))
-            u_tan = np.append(u_tan, u_rim.dot(n_tan) / np.sqrt(n_tan.dot(n_tan)))
-
-        u_rad = np.array(u_rad)
-        u_tan = np.array(u_tan)
+            u_tan = np.append(u_tan, u_rim.dot(n_tan) /
+                              np.sqrt(n_tan.dot(n_tan)))
+            u_z = np.append(u_z, u_rim.dot(np.array([0, 0, 1])))
 
         return u_rad, u_tan
 
@@ -56,7 +54,8 @@ class FEMSolution:
         for n in range(len(node_id)):
             n_id = node_id[n]
 
-            x = np.array([self.x_nodes[n_id], self.y_nodes[n_id], self.z_nodes[n_id]])
+            x = np.array([self.x_nodes[n_id], self.y_nodes[n_id],
+                          self.z_nodes[n_id]])
             n_tan = np.cross(np.array([0, 0, 1]), x)
 
             u = scale_rad*u_rad * x/np.sqrt(x.dot(x)) + scale_tan*u_tan * n_tan
@@ -122,10 +121,12 @@ class FEMSolution:
 
         theta_ii = np.linspace(-np.pi/2, 3*np.pi/2, 1000)
 
+        # Wrap the first value to the end to ensure continuity of the interpolation
         theta_interp = interpolate.interp1d(np.append(theta, theta[0] + 2*np.pi),
                                             np.append(theta_def, theta_def[0] + 2*np.pi))
-        theta_def_ii = theta_interp(theta_ii)
 
+        # Interpolate radial and tangential displacements
+        theta_def_ii = theta_interp(theta_ii)
         r_def_ii = interp_periodic(theta, r_def, theta_ii)
 
         # Plot undeformed rim
