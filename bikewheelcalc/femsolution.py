@@ -160,24 +160,34 @@ class FEMSolution:
         # Get list of spoke tension
         spoke_tension = self.get_spoke_tension()
 
-        # drive-side spokes
-        angle = self.geom.a_rim_nodes[np.where(self.geom.s_hub_nodes == 1)[0]] - np.pi/2
-        tension = spoke_tension[np.where(self.geom.s_hub_nodes == 1)[0]]
+        # Angular positions of spoke nipples (x-axis is theta=0)
+        theta_rim = [rect2pol(np.array([self.x_nodes[self.el_n2[i]],
+                                        self.y_nodes[self.el_n2[i]],
+                                        self.z_nodes[self.el_n2[i]]]))[1]
+                     for i in range(len(self.el_type))
+                     if self.el_type[i] == EL_SPOKE]
 
-        angle = np.append(angle, angle[0])
-        tension = np.append(tension, tension[0])
+        # Rotate so that theta=0 is down (bottom of the wheel)
+        theta_rim = np.array(theta_rim) - np.pi/2
 
-        l_drive, = ax1.plot(angle, tension, '.-',
+        z_hub = np.array([self.z_nodes[self.el_n1[i]]
+                          for i in range(len(self.el_type))
+                          if self.el_type[i] == EL_SPOKE])
+
+        # Plot spoke tensions for drive-side spokes
+        theta = np.append(theta_rim[z_hub > 0], theta_rim[z_hub > 0][0])
+        tension = np.append(spoke_tension[z_hub > 0],
+                            spoke_tension[z_hub > 0][0])
+
+        l_drive, = ax1.plot(theta, tension, '.-',
                             color='#69D2E7', linewidth=3, markersize=15)
 
         # non-drive-side spokes
-        angle = self.geom.a_rim_nodes[np.where(self.geom.s_hub_nodes == -1)[0]] - np.pi/2
-        tension = spoke_tension[np.where(self.geom.s_hub_nodes == -1)[0]]
+        theta = np.append(theta_rim[z_hub < 0], theta_rim[z_hub < 0][0])
+        tension = np.append(spoke_tension[z_hub < 0],
+                            spoke_tension[z_hub < 0][0])
 
-        angle = np.append(angle, angle[0])
-        tension = np.append(tension, tension[0])
-
-        l_nondrive, = ax1.plot(angle, tension, '.-',
+        l_nondrive, = ax1.plot(theta, tension, '.-',
                                color='#F38630', linewidth=3, markersize=15)
 
         l_drive.set_label('right')
