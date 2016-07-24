@@ -349,14 +349,11 @@ class BicycleWheelFEM:
         e2 = e2 / np.sqrt(e2.dot(e2))
         e3 = np.cross(e1, e2)                   # second normal vector
 
-        # do not allow negative spoke tension (compression)
-        # TODO
-
         # axial stiffness (normal)
         k_n = s.EA / l
 
-        # tension stiffness (transverse)
-        k_t = self.el_prestress[el_id] / l
+        # tension stiffness (transverse). No negative tension-stiffness
+        k_t = max(0.0, self.el_prestress[el_id] / l)
 
         # bending stiffness (transverse)
         # Generally, bending stiffness is negligible. It is only present for
@@ -858,6 +855,8 @@ class BicycleWheelFEM:
             for e in self.get_spoke_elements():
                 self.el_prestress[e] = self.el_prestress[e] +\
                     soln1.el_stress[e][0]
+        else:
+            pretension = 0.0
 
         # solve with updated element tensions
         soln_2 = self.solve_iteration()
