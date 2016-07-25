@@ -1,30 +1,29 @@
-#!/usr/bin/env python
-
 import bikewheelcalc as bc
 import matplotlib.pyplot as pp
 import numpy as np
 
 
-# Initialize wheel geometry from wheel files
-geom = []
-geom.append(bc.WheelGeometry(wheel_file='wheel_36_x1.txt'))
-geom.append(bc.WheelGeometry(wheel_file='wheel_36_x2.txt'))
-geom.append(bc.WheelGeometry(wheel_file='wheel_36_x3.txt'))
-geom.append(bc.WheelGeometry(wheel_file='wheel_36_x4.txt'))
-geom.append(bc.WheelGeometry(wheel_file='wheel_36_crowsfoot.txt'))
+# Create 5 wheels
+wheels = [bc.BicycleWheel() for i in range(5)]
 
+for i, w in enumerate(wheels):
 
-# Rim section and material properties
-r_sec = bc.RimSection(area=82.0e-6,      # cross-sectional area
-                      I11=5620.0e-12,    # area moment of inertia (twist)
-                      I22=1187.0e-12,    # area moment of inertia (wobble)
-                      I33=1124.0e-12,    # area moment of inertia (squish)
-                      young_mod=69.0e9,  # Young's modulus - aluminum
-                      shear_mod=26.0e9)  # shear modulus - aluminum
+    # Create hub
+    w.hub = w.Hub(diam1=0.04, width1=0.03)
 
-# spoke section and material properties
-s_sec = bc.SpokeSection(2.0e-3,  # spoke diameter
-                        210e9)   # Young's modulus - steel
+    # Create rim
+    w.rim = w.Rim.general(radius=0.3,
+                          area=82.0e-6,
+                          I11=5620e-12,
+                          I22=1187e-12,
+                          I33=1124e-12,
+                          Iw=0.0,
+                          young_mod=69.0e9,
+                          shear_mod=26.0e9)
+
+    # Generate spoking pattern
+    w.lace_cross(n_spokes=36, n_cross=i, diameter=2.0e-3,
+                 young_mod=210e9, offset=0.0)
 
 # Rotational stiffness is the ratio of applied torque to hub twist in degrees.
 # This can be calculated by twisting the hub a fixed amount and measuring the
@@ -40,10 +39,9 @@ stiff_lat = []  # Units: [N/m]
 # resulting displacement. The hub is rigidly clamped.
 stiff_rad = []  # Units: [N/m]
 
+for w in wheels:
 
-for g in geom:
-
-    fem = bc.BicycleWheelFEM(g, r_sec, s_sec)
+    fem = bc.BicycleWheelFEM(w)
 
     # Create a rigid body to constrain the hub nodes
     r_hub = bc.RigidBody('hub', [0, 0, 0], fem.get_hub_nodes())
@@ -59,10 +57,9 @@ for g in geom:
     # Remove forces and boundary conditions
     fem.remove_bc(range(fem.n_nodes), range(6))
 
-
     # Calculate lateral stiffness. Apply a sideways force to the bottom node
     fem.add_constraint(r_hub.node_id, range(6))
-    fem.add_force(0, 2, 1)
+    fem.add_force(0, 2, 1.0)
 
     soln = fem.solve()
     stiff_lat.append(1.0 / np.abs(soln.nodal_disp[0, 2]))
@@ -80,14 +77,14 @@ for g in geom:
 
     fem.add_constraint(r_hub.node_id, 5, np.pi/180)  # rotate by 1 degree
 
-    soln = fem.solve() 
+    soln = fem.solve()
     stiff_rot.append(soln.nodal_rxn[r_rim.node_id, 5])
 
 # Print a table of stiffnesses
 print '\n\n'
 print 'wheel | rotational [N-m/degree] | radial [N/m] | lateral [N/m]'
 print '--------------------------------------------------------------'
-for i in range(len(geom)):
+for i in range(len(wheels)):
     print '  {i:2d}          {r:5.3e}             {d:5.3e}      {l:4.3e}'.format(i=i, r=stiff_rot[i], d=stiff_rad[i], l=stiff_lat[i])
 
 # Create bar graphs of stiffnesses

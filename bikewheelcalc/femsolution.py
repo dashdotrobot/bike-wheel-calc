@@ -12,63 +12,57 @@ N_REF = 3
 
 
 class FEMSolution:
-    el_rim = 1
-    el_spoke = 2
+    """Finite-element solution and simple post-processing methods.
+
+    A FEMSolution object is returned by the BicycleWheelFEM.solve method.
+    """
 
     def get_polar_displacements(self, node_id):
-        'Convert nodal displacements to polar form'
+        'Convert nodal displacements to polar form.'
 
-        # Allow array input for node_id and/or dof
+        # Allow array input for node_id
         if not hasattr(node_id, '__iter__'):
             node_id = [node_id]
 
         u_rad = np.array([])
         u_tan = np.array([])
+        u_z = np.array([])
 
         for n in node_id:
 
             x = np.array([self.x_nodes[n], self.y_nodes[n], self.z_nodes[n]])
-            n_tan = np.cross(np.array([0,0,1]),x)
+            n_tan = np.cross(np.array([0, 0, 1]), x)
 
             u_rim = self.nodal_disp[n, 0:3]
 
             u_rad = np.append(u_rad, u_rim.dot(x) / np.sqrt(x.dot(x)))
-            u_tan = np.append(u_tan, u_rim.dot(n_tan) / np.sqrt(n_tan.dot(n_tan)))
+            u_tan = np.append(u_tan, u_rim.dot(n_tan) /
+                              np.sqrt(n_tan.dot(n_tan)))
+            u_z = np.append(u_z, u_rim.dot(np.array([0, 0, 1])))
 
-        u_rad = np.array(u_rad)
-        u_tan = np.array(u_tan)
+        return u_rad, u_tan, u_z
 
-        return u_rad, u_tan
-
-    def get_deformed_coords(self, node_id, scale_rad=1.0, scale_tan=1.0):
+    def get_deformed_coords(self, node_id, def_scale=1.0):
         'Get coordinates of nodes in scaled deformed configuration.'
 
         # Allow array input for node_id and/or dof
         if not hasattr(node_id, '__iter__'):
             node_id = [node_id]
 
-        x_def = np.array([])
-        y_def = np.array([])
-        z_def = np.array([])  # TODO
+        u_x = self.nodal_disp[node_id, 0]
+        u_y = self.nodal_disp[node_id, 1]
+        u_z = self.nodal_disp[node_id, 2]
 
-        u_rad, u_tan = self.get_polar_displacements(node_id)
+        x_def = self.x_nodes[node_id] + def_scale*u_x
+        y_def = self.y_nodes[node_id] + def_scale*u_y
+        z_def = self.z_nodes[node_id] + def_scale*u_z
 
-        for n in range(len(node_id)):
-            n_id = node_id[n]
-
-            x = np.array([self.x_nodes[n_id], self.y_nodes[n_id], self.z_nodes[n_id]])
-            n_tan = np.cross(np.array([0, 0, 1]), x)
-
-            u = scale_rad*u_rad * x/np.sqrt(x.dot(x)) + scale_tan*u_tan * n_tan
-
-            x_def = np.append(x_def, x[0] + u[0])
-            y_def = np.append(y_def, x[1] + u[1])
-
-        return x_def, y_def
+        return x_def, y_def, z_def
 
     def get_spoke_tension(self):
-        'Return a list of spoke tensions'
-        spoke_tension = [self.el_stress[e][0]
+        'Return a list of spoke tensions.'
+
+        spoke_tension = [self.el_stress[e][0] + self.el_prestress[e]
                          for e in range(len(self.el_type))
                          if self.el_type[e] == EL_SPOKE]
 
@@ -92,56 +86,71 @@ class FEMSolution:
 
         return np.array(rim_stress)
 
-    def plot_deformed_wheel(self, scale_rad=0.1, scale_tan=0.0):
-        'Plot the exaggerated, deformed wheel shape.'
+    def plot_deformed_wheel(self, rel_scale=0.1):
+        """Plot the exaggerated deformed wheel shape.
 
+        The scale factor for nodal displacements is set so that the largest
+        displacement magnitude is equal to rel_scale*radius, where radius is
+        the radius of the rim.
+        """
+
+        # Displacements of rim nodes
         rim_nodes = np.where(self.type_nodes == N_RIM)[0]
+        u_rad, u_tan, u_z = self.get_polar_displacements(rim_nodes)
 
-        u_rad, u_tan = self.get_polar_displacements(rim_nodes)
-
-        # Scale the largest displacement to a percentage of the rim radius
-        if max(np.abs(u_rad)) > 0:
-            scale_rad = self.geom.d_rim/2 / max(np.abs(u_rad)) * scale_rad
-            scale_tan = self.geom.d_rim/2 / max(np.abs(u_rad)) * scale_tan
+        # Set the deformation scale to rel_scale*radius / u_max
+        u_mag = np.sqrt(u_rad**2 + u_tan**2 + u_z**2)
+        if max(u_mag) > 0:
+            def_scale = rel_scale * self.wheel.rim.radius / max(u_mag)
         else:
-            scale_rad = 0
-            scale_tan = 0
+            def_scale = 0.0
 
-        theta = self.geom.a_rim_nodes - np.pi/2
+        # Angular positions of spoke nipples (x-axis is theta=0)
+        theta = np.array([rect2pol(np.array([self.x_nodes[i],
+                                             self.y_nodes[i],
+                                             self.z_nodes[i]]))[1]
+                          for i in range(len(self.x_nodes))
+                          if self.type_nodes[i] == N_RIM])
+
+        # Put theta=0 at the bottom of the wheel
+        theta = np.mod(theta + 2*np.pi, 2*np.pi) - np.pi/2
 
         # Calculate coordinates in deformed configuration
-        theta_def = theta + scale_tan * u_tan / (self.geom.d_rim / 2)
-        r_def = (self.geom.d_rim / 2) + scale_rad * u_rad
+        theta_def = theta + def_scale * u_tan / (self.wheel.rim.radius)
+        r_def = (self.wheel.rim.radius) + def_scale * u_rad
 
         theta_ii = np.linspace(-np.pi/2, 3*np.pi/2, 1000)
 
+        # Wrap the first value to the end to ensure continuity of the interpolation
         theta_interp = interpolate.interp1d(np.append(theta, theta[0] + 2*np.pi),
                                             np.append(theta_def, theta_def[0] + 2*np.pi))
-        theta_def_ii = theta_interp(theta_ii)
 
+        # Interpolate radial and tangential displacements
+        theta_def_ii = theta_interp(theta_ii)
         r_def_ii = interp_periodic(theta, r_def, theta_ii)
 
         # Plot undeformed rim
-        pp.plot(self.geom.d_rim/2 * np.cos(theta_ii),
-                self.geom.d_rim/2 * np.sin(theta_ii), 'k:')
+        pp.plot(self.wheel.rim.radius * np.cos(theta_ii),
+                self.wheel.rim.radius * np.sin(theta_ii), 'k:')
 
         # Plot deformed rim
-        pp.plot(r_def_ii * np.cos(theta_def_ii), r_def_ii * np.sin(theta_def_ii), 'k', linewidth=2.0)
+        pp.plot(r_def_ii * np.cos(theta_def_ii),
+                r_def_ii * np.sin(theta_def_ii), 'k', linewidth=2.0)
 
         # Plot spokes in deformed configuration
         for e in np.where(self.el_type == EL_SPOKE)[0]:
             n_hub = self.el_n1[e]
             n_rim = self.el_n2[e]
 
-            x_hub, y_hub = self.get_deformed_coords(n_hub, scale_rad, scale_tan)
-            x_rim, y_rim = self.get_deformed_coords(n_rim, scale_rad, scale_tan)
+            x_hub, y_hub, z_hub = self.get_deformed_coords(n_hub, def_scale)
+            x_rim, y_rim, z_rim = self.get_deformed_coords(n_rim, def_scale)
 
             pp.plot([x_hub, x_rim], [y_hub, y_rim], 'k-')
 
         # Axis properties
         ax = pp.gca()
-        ax.set_ylim([-1.2*self.geom.d_rim/2, 1.2*self.geom.d_rim/2])
-        ax.set_xlim([-1.2*self.geom.d_rim/2, 1.2*self.geom.d_rim/2])
+        ax.set_ylim([-1.2*self.wheel.rim.radius, 1.2*self.wheel.rim.radius])
+        ax.set_xlim([-1.2*self.wheel.rim.radius, 1.2*self.wheel.rim.radius])
 
         ax.set_aspect('equal', 'datalim')
 
@@ -151,7 +160,12 @@ class FEMSolution:
         return pp.gcf()
 
     def plot_spoke_tension(self, fig=None):
-        'Plot the spoke tensions on a polar plot'
+        """Plot the spoke tensions on a polar plot.
+
+        The format of the plot is meant to mimic the look of the Park Tool
+        Wheel Tension App (www.parktool.com/wta). Drive-side spokes are shown
+        in orange while left-side spokes are shown in blue. Spoke positions
+        refer to the spoke nipples."""
 
         if fig is None:
             fig = pp.figure()
@@ -162,25 +176,35 @@ class FEMSolution:
         # Get list of spoke tension
         spoke_tension = self.get_spoke_tension()
 
-        # drive-side spokes
-        angle = self.geom.a_rim_nodes[np.where(self.geom.s_hub_nodes == 1)[0]] - np.pi/2
-        tension = spoke_tension[np.where(self.geom.s_hub_nodes == 1)[0]]
+        # Angular positions of spoke nipples (x-axis is theta=0)
+        theta_rim = [rect2pol(np.array([self.x_nodes[self.el_n2[i]],
+                                        self.y_nodes[self.el_n2[i]],
+                                        self.z_nodes[self.el_n2[i]]]))[1]
+                     for i in range(len(self.el_type))
+                     if self.el_type[i] == EL_SPOKE]
 
-        angle = np.append(angle, angle[0])
-        tension = np.append(tension, tension[0])
+        # Rotate so that theta=0 is down (bottom of the wheel)
+        theta_rim = np.array(theta_rim) - np.pi/2
 
-        l_drive, = ax1.plot(angle, tension, '.-',
-                            color='#69D2E7', linewidth=3, markersize=15)
+        z_hub = np.array([self.z_nodes[self.el_n1[i]]
+                          for i in range(len(self.el_type))
+                          if self.el_type[i] == EL_SPOKE])
+
+        # Plot spoke tensions for drive-side spokes
+        theta = np.append(theta_rim[z_hub > 0], theta_rim[z_hub > 0][0])
+        tension = np.append(spoke_tension[z_hub > 0],
+                            spoke_tension[z_hub > 0][0])
+
+        l_drive, = ax1.plot(theta, tension, '.-',
+                            color='#F38630', linewidth=3, markersize=15)
 
         # non-drive-side spokes
-        angle = self.geom.a_rim_nodes[np.where(self.geom.s_hub_nodes == -1)[0]] - np.pi/2
-        tension = spoke_tension[np.where(self.geom.s_hub_nodes == -1)[0]]
+        theta = np.append(theta_rim[z_hub < 0], theta_rim[z_hub < 0][0])
+        tension = np.append(spoke_tension[z_hub < 0],
+                            spoke_tension[z_hub < 0][0])
 
-        angle = np.append(angle, angle[0])
-        tension = np.append(tension, tension[0])
-
-        l_nondrive, = ax1.plot(angle, tension, '.-',
-                               color='#F38630', linewidth=3, markersize=15)
+        l_nondrive, = ax1.plot(theta, tension, '.-',
+                               color='#69D2E7', linewidth=3, markersize=15)
 
         l_drive.set_label('right')
         l_nondrive.set_label('left')
@@ -190,7 +214,7 @@ class FEMSolution:
     def __init__(self, fem):
         self.updated = False
 
-        self.geom = copy.copy(fem.geom)
+        self.wheel = copy.copy(fem.wheel)
 
         self.x_nodes = fem.x_nodes.copy()
         self.y_nodes = fem.y_nodes.copy()
@@ -208,4 +232,5 @@ class FEMSolution:
         self.dof_rxn = None
 
         # element stresses
+        self.el_prestress = []
         self.el_stress = []

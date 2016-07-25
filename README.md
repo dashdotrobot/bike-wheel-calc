@@ -11,7 +11,7 @@ stress analysis or numerical methods.
 **bike-wheel-calc** is a flexible, open-source, 3-dimensional finite-element solver for calculating the stresses and deformations of a thin-spoked bicycle wheel. By changing the geometry and material properties of the rim and spokes, and the spoke lacing pattern, almost any bicycle wheel can be simulated. The wheel can be arbitrarily constrained to represent real-world scenarios, and arbitrary forces and torques can be applied to points on the rim or hub.
 
 Some example calculations that can be performed with bike-wheel-fem are:
-* calculating change in spoke tension under rider weight, acceleration, cornering, etc
+* calculating change in spoke tension under rider weight, acceleration, braking, etc
 * calculating the wheel stiffness, including rotational, lateral, and radial
 * determining the effect of breaking a spoke
 * comparing the performance of different spoke lacing patterns
@@ -34,65 +34,63 @@ Download all the files into one directory. You can put the folder bikewheelcalc 
 
 ## Usage
 
-To perform a typical computation, you should (1) define the wheel geometry, (2) define the spoke and rim material properties, (3) add constraints ("clamp" or "fix" the wheel at some points), (4) add forces or torques, and finally, (5) solve!
+To perform a typical computation, you should (1) define the wheel properties, (2) define the spoke and rim material properties, (3) add constraints ("clamp" or "fix" the wheel at some points), (4) add forces or torques, and finally, (5) solve!
 
 ### 1 Defining wheel geometry and material properties
 
-A WheelGeometry object defines the geometry of a bicycle wheel including rim diameter, hub diameter (drive-side and non-drive-side), hub width (drive-side and non-drive-side), and spoke connections.
-
-Wheel geometry can be defined through the constructor, or by loading a separate wheel file. Spokes can either be specified in the wheel file, or added manually.
+A BicycleWheel objects defines the geometry, material properties, and spoke arrangement of the wheel. First, create an empty wheel object:
 
 ```python
-geom = WheelGeometry(wheel_file='wheel_36_x3.txt')
+wheel = BicycleWheel()
 ```
 
-Or:
+Next, define the hub using the subclass Hub:
 
 ```python
-geom = WheelGeometry(rim_diam=0.6, hub_diam=0.04, hub_width=0.035, n_spokes=36)
-geom.add_spoke(31, 1)
-geom.add_spoke(32, 2)
-geom.add_spoke(9, 3)
+wheel.hub = wheel.Hub(diam1=0.04, width1=0.03)
+```
+
+You can specify a different flange diameter and width for the non-drive side by specifying the optional diam2 and width2 keywords. All dimensions are in meters (30 millimeters = 0.03 meters).
+
+Next, define the rim using one of the available constructors. The most general constructor is the general() constructor."
+
+```python
+wheel.rim = wheel.Rim.general(radius=0.3,
+                              area=82.0e-6,
+                              I11=5620e-12,
+                              I22=1187e-12,
+                              I33=1124e-12,
+                              Iw=0.0,
+                              young_mod=69.0e9,
+                              shear_mod=26.0e9)
+```
+
+`radius` is the radius of the rim centroid (the geometric center of the rim cross-section), `area` is the cross-sectional area, `I11` is the [torsion constant](https://en.wikipedia.org/wiki/Torsion_constant), `I22` is the [second moment of area](https://en.wikipedia.org/wiki/Second_moment_of_area) for out-of-plane bending, `I33` is the second moment of area for in-plane bending, `Iw` is the warping constant (set to zero if you are unsure), `young_mod` is the rim material [Young's Modulus](http://en.wikipedia.org/wiki/Young%27s_modulus), and `shear_mod` is the rim material [Shear Modulus](http://en.wikipedia.org/wiki/Shear_modulus).
+
+Next, create spokes by either using a predefined spoke configuration:
+
+```python
+wheel.lace_cross(n_spokes=36, n_cross=3, diameter=2.0e-3, young_mod=210e9)
+```
+
+or by defining spokes manually:
+
+```python
+rim_pt = (r_rim, theta_rim, z_rim)
+hub_pt = (r_hub, theta_hub, z_hub)
+d = 2.0e-3
+wheel.spokes.append(wheel.Spoke(rim_pt, hub_pt, diameter=d, young_mod=210e9))
 ...
 ```
 
-Diameters should be specified in meters. The `add_spoke(i, j)` command adds a spoke connecting the `i`th hub eyelet (a number between 1 and the number of hub eyelets) to the `j`th spoke nipple (a number between 1 and the number of spoke nipples). These are **not** the node IDs of these points.
-
-If the `n_spokes` parameter is omitted and a wheel file is not provided, the locations of the hub eyelets and spoke nipples must be defined manually.
-
-```python
-geom = WheelGeometry(rim_diam=0.6, hub_diam=0.04, hub_width=0.035)
-geom.add_nipple([0, 10, 20, 30, ...])
-geom.add_eyelet([0, 10, 20, 30, ...], [1, -1, 1, -1, ...])
-```
-
-The first argument is a list of the angular positions (starting from 0 degrees = bottom center), while the second argument to `add_eyelet()` is a list of the same length specifying the side (1 = drive side, -1 = non-drive side).
-
-The SpokeSection object defines the spoke diameter and the spoke material [Young's Modulus](http://en.wikipedia.org/wiki/Young%27s_modulus).
-
-```python
-spoke_section = SpokeSection(d_spoke=0.002, young_mod=210e9)
-```
-
-The RimSection object defines the material properties and cross-section geometric properties of the rim.
-
-```python
-rim_section = RimSection(area=82.0e-6,      # cross-sectional area
-                         I11=5620.0e-12,    # area moment of inertia (twist)
-                         I22=1187.0e-12,    # area moment of inertia (wobble)
-                         I33=1124.0e-12,    # area moment of inertia (squish)
-                         young_mod=69.0e9,  # Young's modulus - aluminum
-                         shear_mod=26.0e9)  # shear modulus - aluminum
-```
-
-The [area moment of inertia](http://en.wikipedia.org/wiki/Second_moment_of_area) is a geometric property of the cross-section. It is easy to calculate for simple geometric shapes (circles, boxes, etc) but can be quite complicated for generic hollow sections, like most bicycle rims. The quantity `I22` is actually the [polar moment of inertia](http://en.wikipedia.org/wiki/Polar_moment_of_inertia), which is related to the twisting of the rim. Rim twist probably plays a smaller role in wheel deformation under most circumstances, and it may be safe to simply choose a large value (larger than `I22` or `I33`) for simple in-plane problems like rider weight, acceleration, or braking loads.
+The first two arguments are tuples defining the position of the spoke nipple and hub eyelet, respectively, in polar coordinates (R, theta, z). The spoke nipple does not need to lie on the rim centroid line. For example, a "fat-bike" wheel typically has spoke nipples which are offset from the centerline of the rim to provide torsional stability to the rim.
 
 ### 2 Create BicycleWheelFEM object (finite-element solver)
 
 The BicycleWheelFEM object represents the model that you are solving, including the nodes (points) and elements (spokes and rim segments), and the constraints and forces (boundary conditions).
 
 ```python
-fem = BicycleWheelFEM(geom=geom, rim_sec=rim_section, spoke_sec = spoke_section)
+fem = BicycleWheelFEM(wheel)
 ```
 
 ### 3 Add constraints
@@ -184,12 +182,9 @@ Each constrained node has a reaction force (or torque) associated with it. The r
 * LICENSE - MIT license
 * README.md - this file
 * example_"".py - Example scripts
-* wheel_"".txt - Example wheel definition files
 * bikewheelcalc/
+ * bicyclewheel.py - BicycleWheel class. Basic wheel and properties definition.
  * bikewheelfem.py - BicycleWheelFEM class. Core finite-element solver routines
  * femsolution.py - FEMSolution class. Result database and post-processing / visualization methods.
  * helpers.py - utility methods
  * rigidbody.py - RigidBody class. A rigid body object constrains multiple nodes to move rigidly.
- * rimsection.py - RimSection class. Rim material and section properties
- * spokesection.py - SpokeSection class. Spoke material and section properties
- * wheelgeometry.py - WheelGeometry class. Methods for parsing wheel files

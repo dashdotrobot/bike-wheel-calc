@@ -1,25 +1,18 @@
-#!/usr/bin/env python
-
 import bikewheelcalc as bc
 import matplotlib.pyplot as pp
 import numpy as np
 
 
-# Initialize wheel geometry from wheel files
-geom = bc.WheelGeometry(wheel_file='wheel_36_x3.txt')
-
-# Rim section and material properties
-r_sec = bc.RimSection(area=82.0e-6,      # cross-sectional area
-                   I11=5620.0e-12,    # area moment of inertia (twist)
-                   I22=1187.0e-12,    # area moment of inertia (wobble)
-                   I33=1124.0e-12,    # area moment of inertia (squish)
-                   young_mod=69.0e9,  # Young's modulus - aluminum
-                   shear_mod=26.0e9)  # shear modulus - aluminum
-
-# spoke section and material properties
-s_sec = bc.SpokeSection(2.0e-3,  # spoke diameter
-                     210e9)   # Young's modulus - steel
-
+# Create an example wheel and rim
+wheel = bc.BicycleWheel()
+wheel.rim = wheel.Rim.general(radius=0.3,
+                              area=82.0e-6,
+                              I11=5620e-12,
+                              I22=1187e-12,
+                              I33=1124e-12,
+                              Iw=0.0,
+                              young_mod=69.0e9,
+                              shear_mod=26.0e9)
 
 diam_flange = np.linspace(0.01, 0.1, 10)
 
@@ -27,10 +20,13 @@ rot_stiff = []
 
 for d in diam_flange:
 
+    # Create hub and spokes for each flange diameter
+    wheel.hub = wheel.Hub(diam1=d, width1=0.03)
+    wheel.lace_cross(n_spokes=36, n_cross=3, diameter=2.0e-3,
+                     young_mod=210e9, offset=0.0)
+
     # Create FEM model
-    geom.d1_hub = d
-    geom.d2_hub = d
-    fem = bc.BicycleWheelFEM(geom, r_sec, s_sec)
+    fem = bc.BicycleWheelFEM(wheel)
 
     # Rigid body to constrain hub nodes
     r_hub = bc.RigidBody('hub', [0, 0, 0], fem.get_hub_nodes())
@@ -38,9 +34,8 @@ for d in diam_flange:
     fem.add_rigid_body(r_hub)
     fem.add_rigid_body(r_rim)
 
-    fem.add_constraint(r_rim.node_id, range(6))   # fix rim
-    fem.add_constraint(r_hub.node_id, [2, 3, 4])  # fix hub z, roll, and yaw
-
+    fem.add_constraint(r_rim.node_id, range(6))      # fix rim
+    fem.add_constraint(r_hub.node_id, [2, 3, 4])     # fix hub z, roll, and yaw
     fem.add_constraint(r_hub.node_id, 5, np.pi/180)  # rotate by 1 degree
 
     soln = fem.solve()
