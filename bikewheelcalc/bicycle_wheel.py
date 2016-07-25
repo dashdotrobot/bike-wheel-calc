@@ -182,5 +182,17 @@ class BicycleWheel:
             spoke = self.Spoke(rim_pt, hub_pt, diameter, young_mod)
             self.spokes.append(spoke)
 
+    def calc_mass(self):
+        'Calculate total mass of the wheel in kilograms.'
+
+        # TODO
+        pass
+
+    def calc_rot_inertia(self):
+        'Calculate rotational inertia about the hub axle.'
+
+        # TODO
+        pass
+
     def __init__(self):
         self.spokes = []

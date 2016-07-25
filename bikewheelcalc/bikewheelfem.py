@@ -41,28 +41,6 @@ class BicycleWheelFEM:
         'Return element IDs of all hub elements.'
         return np.where(self.el_type == EL_SPOKE)[0]
 
-    def BROKEN_calc_mass(self):
-        'Estimate the total mass of the wheel, in kg'
-
-        # Estimate total rim volume
-        vol_rim = self.rim_A * np.pi * self.geom.d_rim
-        mass_rim = vol_rim * self.rim_sec.density
-
-        # Estimate total spoke volume
-        mass_spokes = 0
-        for s in self.get_spoke_elements():
-            e = self.elements[s]
-            node1_pos = self.get_node_pos(e.nodes[0])
-            node2_pos = self.get_node_pos(e.nodes[1])
-
-            # spoke length
-            e1 = (node2_pos + e.offset*np.array([0, 0, 1])) - node1_pos
-            l = np.sqrt(e1.dot(e1))
-
-            mass_spokes += l * e.section.area * e.section.density
-
-        return mass_rim + mass_spokes
-
     def calc_spoke_stiff(self, el_id, s):
         'Calculate stiffness matrix for a single spoke.'
 
