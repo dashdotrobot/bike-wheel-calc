@@ -1,12 +1,8 @@
-'Finite-element solver for performing stress analysis on a bicycle wheel.'
-
 import numpy as np
 from femsolution import FEMSolution
 from helpers import *
 from bicycle_wheel import *
-
 from rigidbody import *
-import matplotlib.pyplot as pp
 
 EL_RIM = 1
 EL_SPOKE = 2
@@ -16,10 +12,15 @@ N_REF = 3
 
 
 class BicycleWheelFEM:
-    'Finite-element implementation and methods'
+    """Finite-element solver for performing stress analysis bicycle wheels.
+
+    Creates a finite-element model from a BicycleWheel object and solves the
+    linear elasticity equations K*u = f subject to constraints and boundary
+    conditions.
+    """
 
     def get_node_pos(self, node_id):
-        'Return an NdArray of [X,Y,Z] position of node.'
+        'Return the [X,Y,Z] position of a node as an NdArray.'
         return np.array([self.x_nodes[node_id],
                          self.y_nodes[node_id],
                          self.z_nodes[node_id]])
@@ -63,7 +64,7 @@ class BicycleWheelFEM:
         return mass_rim + mass_spokes
 
     def calc_spoke_stiff(self, el_id, s):
-        'Calculate spoke stiffness matrix.'
+        'Calculate stiffness matrix for a single spoke.'
 
         n2 = self.el_n2[el_id]
 
@@ -345,6 +346,7 @@ class BicycleWheelFEM:
                 e1_1.dot(f_el[3:6]), e2_1.dot(f_el[3:6]), e3_1.dot(f_el[3:6]))
 
     def add_rigid_body(self, rigid_body):
+        'Add a rigid body defined by the arg rigid_body.'
 
         # Check that nodes are not already assigned to rigid bodies
         for rig in self.rigid:
@@ -377,12 +379,13 @@ class BicycleWheelFEM:
         self.calc_reduction_matrices()
 
     def calc_reduction_matrices(self):
-        'Calculates matrices which encode rigid body constraints'
+        """Calculate matrices which encode rigid body constraints.
 
-        # Convert stiffness equation into reduced equation
-        #   U  = C * U_reduced
-        #   F_reduced = B * F
-        #   F_reduced = (B * K * C) * U_reduced
+        Convert stiffness equation into reduced stiffness equation:
+            U  = C * U_reduced
+            F_reduced = B * F
+            K_reduced = (B * K * C)
+        """
 
         if not self.rigid:  # if there are no rigid bodies
             self.B = 1
@@ -429,7 +432,7 @@ class BicycleWheelFEM:
         self.soln_updated = False
 
     def remove_rigid_body(self, rigid_body):
-        'Remove a rigid body constraint'
+        'Remove a rigid body constraint.'
 
         # Confirm that the rigid body belongs to this model
         if rigid_body not in self.rigid:
@@ -488,7 +491,7 @@ class BicycleWheelFEM:
                     print('\n*** Node {:d}, DOF {:d}: Cannot assign a constraint and force simultaneously\n',format(n,d))
 
     def add_force(self, node_id, dof, f):
-        'Add a concentrated force (Neumann boundary condition).'
+        'Add a concentrated force or moment (Neumann boundary condition).'
 
         dof_r = 6*node_id + dof
 
@@ -607,6 +610,18 @@ class BicycleWheelFEM:
         return soln
 
     def solve(self, pretension=None, verbose=True):
+        """Solve elasticity equations including the effect of prestress.
+
+        Since the spoke stiffness depends on spoke tension, the elasticity
+        equations are technically non-linear. If the pretension keyword is used
+        the solve method first initializes the spoke tensions and then
+        solves the linear stiffness equation by calling the solve_iteration()
+        method. The changes in spoke tension are calculated and used to update
+        the spoke tensions. The solve_iteration() method is called again using
+        the updated spoke tensions. This method only requires 2 iterations to
+        converge because the axial stiffness is orthogonal to the tension
+        stiffness.
+        """
 
         self.verbose = verbose
 
