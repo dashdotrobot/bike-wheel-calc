@@ -518,7 +518,7 @@ class BicycleWheelFEM:
 
         return k_r
 
-    def calc_stiff_mat(self):
+    def calc_global_stiff(self):
         'Calculate global stiffness matrix by element scatter algorithm.'
 
         if self.verbose:
@@ -550,7 +550,7 @@ class BicycleWheelFEM:
                 k_el
 
     def calc_spoke_stress(self, el_id, u):
-        'Calculate tension in spoke.'
+        'Calculate tension in a spoke element.'
 
         n1 = self.el_n1[el_id]
         n2 = self.el_n2[el_id]
@@ -566,14 +566,53 @@ class BicycleWheelFEM:
 
         dofs = np.concatenate((6*n1 + np.arange(6), 6*n2 + np.arange(6)))
 
-        k_spoke = self.calc_spoke_stiff(el_id, s)
+        k_el = self.calc_spoke_stiff(el_id, s)
         u_el = u[dofs]
-
-        f_el = np.array(k_spoke.dot(u_el)).flatten()
+        f_el = np.array(k_el.dot(u_el)).flatten()
 
         # Generalized stress tuple:
         #  Tension
         return (e1.dot(f_el[6:9]), )
+
+    def calc_rim_stress(self, el_id, u):
+        """Calculate internal forces in a rim element.
+
+        Returns the internal forces at the first node of the rim element. The
+        internal forces are defined at the nodes (not integration points)
+        because the stiffness matrix is obtained by Castiliano's method.
+
+        Returns:
+            tuple:
+                0: axial force
+                1: transverse force (in-plane shear)
+                2: transverse force (out-of-plane shear)
+                3: twisting moment
+                4: bending moment (out-of-plane)
+                5: bending moment (in-plane)
+        """
+
+        n1 = self.el_n1[el_id]
+        n2 = self.el_n2[el_id]
+
+        # Local coordinates system at node 1
+        n1_pos = self.get_node_pos(n1)
+        n2_pos = self.get_node_pos(n2)
+
+        e3_1 = np.cross(n1_pos, n2_pos) /\
+            np.sqrt(n1_pos.dot(n1_pos) * n2_pos.dot(n2_pos))
+        e1_1 = np.cross(n1_pos, e3_1) / np.sqrt(n1_pos.dot(n1_pos))
+        e2_1 = np.cross(e3_1, e1_1)
+
+        # Nodal degrees of freedom
+        dofs = np.concatenate((6*n1 + np.arange(6), 6*n2 + np.arange(6)))
+
+        # Calculate nodal forces
+        k_el = self.calc_rim_stiff(el_id)
+        u_el = u[dofs]
+        f_el = np.array(k_el.dot(u_el)).flatten()
+
+        return (e1_1.dot(f_el[0:3]), e2_1.dot(f_el[0:3]), e3_1.dot(f_el[0:3]),
+                e1_1.dot(f_el[3:6]), e2_1.dot(f_el[3:6]), e3_1.dot(f_el[3:6]))
 
     def add_rigid_body(self, rigid_body):
 
@@ -758,7 +797,7 @@ class BicycleWheelFEM:
         'Solve elasticity equations for nodal displacements.'
 
         # Form augmented, reduced stiffness matrix
-        self.calc_stiff_mat()
+        self.calc_global_stiff()
 
         if len(self.rigid) == 0:
             # No rigid bodies. Reduced node IDs are equal to node IDs
@@ -830,8 +869,7 @@ class BicycleWheelFEM:
             if self.el_type[el] == EL_SPOKE:
                 soln.el_stress.append(self.calc_spoke_stress(el, u))
             else:
-                # TODO calculate rim stresses
-                soln.el_stress.append((0.0,))
+                soln.el_stress.append(self.calc_rim_stress(el, u))
 
         if self.verbose:
             print('# ---------------------------------------')
@@ -966,7 +1004,6 @@ if False:
 
     soln = fem.solve(pretension=1000)
 
-    print soln.get_spoke_tension()
-
-    soln.plot_deformed_wheel()
+    rim_bend_moment = [soln.el_stress[i][5] for i in range(36)]
+    pp.plot(rim_bend_moment)
     pp.show()
