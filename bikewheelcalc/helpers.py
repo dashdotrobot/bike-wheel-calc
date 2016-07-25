@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import interpolate
 
+
 def skew_symm(v):
     'Create a skew-symmetric tensor V from vector v such that V*u = v cross u.'
 

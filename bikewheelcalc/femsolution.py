@@ -12,6 +12,10 @@ N_REF = 3
 
 
 class FEMSolution:
+    """Finite-element solution and simple post-processing methods.
+
+    A FEMSolution object is returned by the BicycleWheelFEM.solve method.
+    """
 
     def get_polar_displacements(self, node_id):
         'Convert nodal displacements to polar form.'
@@ -56,7 +60,8 @@ class FEMSolution:
         return x_def, y_def, z_def
 
     def get_spoke_tension(self):
-        'Return a list of spoke tensions'
+        'Return a list of spoke tensions.'
+
         spoke_tension = [self.el_stress[e][0] + self.el_prestress[e]
                          for e in range(len(self.el_type))
                          if self.el_type[e] == EL_SPOKE]
@@ -82,16 +87,21 @@ class FEMSolution:
         return np.array(rim_stress)
 
     def plot_deformed_wheel(self, rel_scale=0.1):
-        'Plot the exaggerated, deformed wheel shape.'
+        """Plot the exaggerated deformed wheel shape.
 
+        The scale factor for nodal displacements is set so that the largest
+        displacement magnitude is equal to rel_scale*radius, where radius is
+        the radius of the rim.
+        """
+
+        # Displacements of rim nodes
         rim_nodes = np.where(self.type_nodes == N_RIM)[0]
-
         u_rad, u_tan, u_z = self.get_polar_displacements(rim_nodes)
 
-        # Scale the largest displacement to a percentage of the rim radius
+        # Set the deformation scale to rel_scale*radius / u_max
         u_mag = np.sqrt(u_rad**2 + u_tan**2 + u_z**2)
         if max(u_mag) > 0:
-            def_scale = self.wheel.rim.radius / max(u_mag) * rel_scale
+            def_scale = rel_scale * self.wheel.rim.radius / max(u_mag)
         else:
             def_scale = 0.0
 
@@ -102,6 +112,7 @@ class FEMSolution:
                           for i in range(len(self.x_nodes))
                           if self.type_nodes[i] == N_RIM])
 
+        # Put theta=0 at the bottom of the wheel
         theta = np.mod(theta + 2*np.pi, 2*np.pi) - np.pi/2
 
         # Calculate coordinates in deformed configuration
@@ -149,7 +160,12 @@ class FEMSolution:
         return pp.gcf()
 
     def plot_spoke_tension(self, fig=None):
-        'Plot the spoke tensions on a polar plot.'
+        """Plot the spoke tensions on a polar plot.
+
+        The format of the plot is meant to mimic the look of the Park Tool
+        Wheel Tension App (www.parktool.com/wta). Drive-side spokes are shown
+        in orange while left-side spokes are shown in blue. Spoke positions
+        refer to the spoke nipples."""
 
         if fig is None:
             fig = pp.figure()
@@ -180,7 +196,7 @@ class FEMSolution:
                             spoke_tension[z_hub > 0][0])
 
         l_drive, = ax1.plot(theta, tension, '.-',
-                            color='#69D2E7', linewidth=3, markersize=15)
+                            color='#F38630', linewidth=3, markersize=15)
 
         # non-drive-side spokes
         theta = np.append(theta_rim[z_hub < 0], theta_rim[z_hub < 0][0])
@@ -188,7 +204,7 @@ class FEMSolution:
                             spoke_tension[z_hub < 0][0])
 
         l_nondrive, = ax1.plot(theta, tension, '.-',
-                               color='#F38630', linewidth=3, markersize=15)
+                               color='#69D2E7', linewidth=3, markersize=15)
 
         l_drive.set_label('right')
         l_nondrive.set_label('left')
