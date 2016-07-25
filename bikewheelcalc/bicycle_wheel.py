@@ -1,15 +1,17 @@
-#!/usr/bin/env python
-
-"""Definition of a bicycle wheel including geometry, spoke properties,
-   and rim properties. Instances of the BicycleWheel class can be used
-   as an input for theoretical calculations and FEM models."""
-
 import numpy as np
 
 
 class BicycleWheel:
+    """Bicycle wheel definition.
+
+    Defines a bicycle wheel including geometry, spoke properties, and rim
+    properties. Instances of the BicycleWheel class can be used as an input
+    for theoretical calculations and FEM models.
+    """
 
     class Rim:
+        'Rim definition.'
+
         def __init__(self, radius, area, I11, I22,
                      I33, Iw, young_mod, shear_mod,
                      sec_type=None, sec_params=None):
@@ -27,7 +29,7 @@ class BicycleWheel:
         @classmethod
         def general(cls, radius, area, I11, I22,
                     I33, Iw, young_mod, shear_mod):
-            'Construct a rim with arbitrary section properties.'
+            'Define a rim with arbitrary section properties.'
 
             r = cls(radius=radius,
                     area=area, I11=I11, I22=I22, I33=I33, Iw=Iw,
@@ -38,7 +40,12 @@ class BicycleWheel:
 
         @classmethod
         def box(cls, radius, young_mod, shear_mod, w, h, t):
-            'Construct a rim from a box cross-section.'
+            """Define a rim from a box cross-section.
+
+            Args:
+                w: width of the rim cross-section, from midline to midline.
+                h: height of the rim cross-section (radial direction).
+                t: wall thickness."""
 
             area = 2*(w+t/2)*t + 2*(h-t/2)*t
 
@@ -66,7 +73,7 @@ class BicycleWheel:
 
             area = w*t + 2*(h-t)*t
 
-            # Torsion and warping constants ---------------
+            # Torsion and warping constants
             # www.cisc-icca.ca/files/technical/techdocs/updates/torsionprop.pdf
             dp = w  # - t
             bp = h  # - t/2
@@ -96,6 +103,15 @@ class BicycleWheel:
             return r
 
     class Hub:
+        """Hub definition.
+
+        Args:
+            diam1: diameter of drive-side flange.
+            diam2: diameter of left-side flange.
+            width1: distance from rim plane to drive-side flange midplane.
+            width2: distance from rim plane to left-side flange midplane.
+        """
+
         def __init__(self, diam1=None, diam2=None, width1=None, width2=None):
             self.width1 = width1
             self.diam1 = diam1
@@ -112,6 +128,12 @@ class BicycleWheel:
             self.radius2 = self.diam2 / 2
 
     class Spoke:
+        """Spoke definition.
+
+        Args:
+            rim_pt: location of the spoke nipple as (R, theta, z)
+            hub_pt: location of the hub eyelet as (R, theta, z)
+        """
 
         def __init__(self, rim_pt, hub_pt, diameter, young_mod):
             self.EA = np.pi / 4 * diameter**2 * young_mod
@@ -162,15 +184,3 @@ class BicycleWheel:
 
     def __init__(self):
         self.spokes = []
-
-# Testing code
-if False:
-    w = BicycleWheel()
-    w.rim = w.Rim.C_channel(radius=0.3,
-                            young_mod=69.0e9, shear_mod=26.0e9,
-                            w=0.050, h=0.010, t=0.002)
-    print 'J  = ', w.rim.I11
-    print 'Iw = ', w.rim.Iw
-
-    print w.rim.shear_mod*w.rim.I11
-    print w.rim.young_mod*w.rim.Iw * 16 / w.rim.radius**2
