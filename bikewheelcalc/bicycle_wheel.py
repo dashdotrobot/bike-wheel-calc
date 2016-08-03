@@ -53,8 +53,8 @@ class BicycleWheel:
             I11 = 2*t*(w*h)**2 / (w + h)
 
             # Moments of area
-            I33 = 2*(t*(h-t)**3/12) + 2*(w*t**3/12 + w*t*(h/2-t/2)**2)
-            I22 = 2*(t*(w-t)**3/12) + 2*(h*t**3/12 + w*t*(w/2-t/2)**2)
+            I33 = 2*(t*(h+t)**3)/12 + 2*((w-t)*t**3/12 + (w-t)*t*(h/2)**2)
+            I22 = 2*(t*(w+t)**3)/12 + 2*((h-t)*t**3/12 + (h-t)*t*(w/2)**2)
 
             # Warping constant
             Iw = 0.0  # closed thin-walled section
@@ -71,34 +71,30 @@ class BicycleWheel:
         def C_channel(cls, radius, young_mod, shear_mod, w, h, t):
             'Construct a rim from a C channel cross-section.'
 
-            area = w*t + 2*(h-t)*t
+            area = (w+t)*t + 2*(h-t)*t
 
             # Torsion and warping constants
-            # www.cisc-icca.ca/files/technical/techdocs/updates/torsionprop.pdf
-            dp = w  # - t
-            bp = h  # - t/2
-            a = 1.0 / (2.0 + dp/(3*bp))
+            # homepage.tudelft.nl/p3r3s/b16_chap7.pdf
 
-            # I11 = (2.0/3.0) * t**3 * (bp + dp)
-            I11 = 1.0/3.0 * t**3 * (dp + 2*bp)
-            Iw = dp**2 * bp**3 * t * ((1.0-3*a)/6 + a**2/2 * (1+dp/(6*bp)))
+            I11 = 1.0/3.0 * t**3 * (w + 2*(h-t))
+            Iw = (t*h**3*w**2/12) * (3*h + 2*w)/(6*h + w)
 
             # Moments of area -----------------------------
             # Centroid location
-            y_c = (w*t*(t/2) + 2*(h-t)*t*((h-t)/2+t)) / area
-            I33 = w*t**3/12 + w*t*(y_c - t/2)**2 +\
-                2 * (t*(h-t)**3/12 + (h-t)*t*(y_c - ((h-t)/2+t))**2)
-            I22 = (t*w**3)/12 + 2*(((h-t/2)*t**3)/12 + (h-t/2)*t*(w/2)**2)
+            y_c = (h-t)*t*h / area
+            I33 = (w+t)*t**3/12 + (w+t)*t*y_c**2 +\
+                2 * (t*(h-t)**3/12 + (h-t)*t*(h/2 - y_c)**2)
+            I22 = (t*w**3)/12 + 2*(((h-t)*t**3)/12 + (h-t)*t*(w/2)**2)
 
             # Shear center --------------------------------
-            y_s = -bp*a
+            y_s = -3*h**2/(6*h + w)
 
             r = cls(radius=radius,
                     area=area, I11=I11, I22=I22, I33=I33, Iw=Iw,
                     young_mod=young_mod, shear_mod=shear_mod,
                     sec_type='C', sec_params={'closed': False,
                                               'w': w, 'h': h, 't': t,
-                                              'y_s': y_s})
+                                              'y_c': y_c, 'y_s': y_s})
 
             return r
 
