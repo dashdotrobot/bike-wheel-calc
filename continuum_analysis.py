@@ -5,8 +5,6 @@
 import numpy as np
 
 
-
-
 def calc_buckling_tension(wheel, approx=None, N=20):
     'Find minimum critical tension within first N modes.'
 
@@ -82,7 +80,6 @@ def calc_buckling_tension(wheel, approx=None, N=20):
     EI = wheel.rim.young_mod * wheel.rim.I22
     EIw = wheel.rim.young_mod * wheel.rim.Iw
     GJ = wheel.rim.shear_mod * wheel.rim.I11
-    
 
     rx = np.sqrt(wheel.rim.I22 / wheel.rim.area)
     ry = np.sqrt(wheel.rim.I33 / wheel.rim.area)
@@ -134,7 +131,7 @@ def calc_continuum_stiff(wheel, tension=0.0):
 def calc_Pn_lat(wheel):
     'Lateral Pippard number (ratio of length scale to spoke spacing).'
 
-    k_sp = wheel.calc_continuum_stiff()
+    k_sp = calc_continuum_stiff(wheel)
     k_uu = k_sp[0, 0]
 
     n_spokes = len(wheel.spokes)
@@ -151,7 +148,7 @@ def calc_Pn_lat(wheel):
 def calc_Pn_rad(wheel):
     'Radial Pippard number (ratio of length scale to spoke spacing).'
 
-    k_sp = wheel.calc_continuum_stiff()
+    k_sp = calc_continuum_stiff(wheel)
     k_vv = k_sp[1, 1]
 
     n_spokes = len(wheel.spokes)
@@ -166,7 +163,7 @@ def calc_Pn_rad(wheel):
 def calc_lambda_lat(wheel):
     'Calculate lambda = k_uu*R^4/EI_lat'
 
-    k_sp = wheel.calc_continuum_stiff()
+    k_sp = calc_continuum_stiff(wheel)
     k_uu = k_sp[0, 0]
 
     return k_uu*wheel.rim.radius**4 / (wheel.rim.young_mod * wheel.rim.I22)
@@ -175,7 +172,7 @@ def calc_lambda_lat(wheel):
 def calc_lambda_rad(wheel):
     'Calculate lambda = k_vv*R^4/EI_rad'
 
-    k_sp = wheel.calc_continuum_stiff()
+    k_sp = calc_continuum_stiff(wheel)
     k_vv = k_sp[1, 1]
 
     return k_vv*wheel.rim.radius**4 / (wheel.rim.young_mod * wheel.rim.I33)
@@ -184,9 +181,9 @@ def calc_lambda_rad(wheel):
 def print_continuum_stats(wheel):
     'Print summary information about the wheel.'
 
-    print 'lambda (lat) :', wheel.calc_lambda_lat()
-    print 'lambda (rad) :', wheel.calc_lambda_rad()
-    print 'R/le (lat)   :', np.power(wheel.calc_lambda_lat(), 0.25)
-    print 'R/le (rad)   :', np.power(wheel.calc_lambda_rad(), 0.25)
-    print 'Pn_lat       :', wheel.calc_Pn_lat()
-    print 'Pn_rad       :', wheel.calc_Pn_rad()
+    print 'lambda (lat) :', calc_lambda_lat(wheel)
+    print 'lambda (rad) :', calc_lambda_rad(wheel)
+    print 'R/le (lat)   :', np.power(calc_lambda_lat(wheel), 0.25)
+    print 'R/le (rad)   :', np.power(calc_lambda_rad(wheel), 0.25)
+    print 'Pn_lat       :', calc_Pn_lat(wheel)
+    print 'Pn_rad       :', calc_Pn_rad(wheel)
