@@ -1,2 +1,5 @@
+# Ignore python bytecode
 *.pyc
 class_structure.pptx
+# Allow a developer to put bikewheelcalc on their python path
+__init__.py
