@@ -388,7 +388,7 @@ class RayleighRitzContinuum:
 
         return 1.0/cV
 
-    def calc_buckling_tension(self, n, tens_stiff=True, stiff_factor=1.0):
+    def acalc_buckling_tension(self, n, tens_stiff=True, stiff_factor=1.0):
 
         k_s = self.wheel.calc_continuum_stiff(tension=0.0)
         k_uu = k_s[0, 0] * stiff_factor
@@ -419,7 +419,7 @@ class RayleighRitzContinuum:
 
         return T_c
 
-    def calc_buckling_tension_quad(self, n):
+    def acalc_buckling_tension_quad(self, n):
         'Calculate buckling tension from full quadratic form.'
 
         k_s = self.wheel.calc_continuum_stiff(tension=0.0)
@@ -490,13 +490,13 @@ class RayleighRitzContinuum:
 
         return Tc
 
-    def Tc_euler(self):
+    def aTc_euler(self):
         'Buckling tension coefficient.'
 
         return 2*np.pi*self.wheel.rim.young_mod*self.wheel.rim.I22 /\
             (len(self.wheel.spokes) * self.wheel.rim.radius**2)
 
-    def min_buckling_mode(self, tens_stiff=True, stiff_factor=1.0, quad=False):
+    def amin_buckling_mode(self, tens_stiff=True, stiff_factor=1.0, quad=False):
         # Check first 20 modes, starting with n=2
 
         if quad:

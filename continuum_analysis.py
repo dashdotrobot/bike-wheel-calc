@@ -1,4 +1,117 @@
+#!/usr/bin/env python
+
+'Tools for continuum analysis (a la Pippard) of bicycle wheels.'
+
 import numpy as np
+
+
+def calc_Tc_mode_quad(wheel, n):
+    'Calculate critical tension for nth mode using full quadratic form.'
+
+    k_s = calc_continuum_stiff(wheel, tension=0.0)
+    k_uu = k_s[0, 0]
+    k_ub = k_s[0, 3]
+    k_bb = k_s[3, 3]
+
+    # shortcuts
+    pi = np.pi
+    ns = len(wheel.spokes)
+    R = wheel.rim.radius
+    l = wheel.spokes[0].length
+    EI = wheel.rim.young_mod * wheel.rim.I22
+    EIw = wheel.rim.young_mod * wheel.rim.Iw
+    GJ = wheel.rim.shear_mod * wheel.rim.I11
+    CT = GJ + EIw*n**2/R**2
+
+    rx = np.sqrt(wheel.rim.I22 / wheel.rim.area)
+    ry = np.sqrt(wheel.rim.I33 / wheel.rim.area)
+
+    if 'y_s' in wheel.rim.sec_params:
+        y0 = wheel.rim.sec_params['y_c'] -\
+            wheel.rim.sec_params['y_s']
+    else:
+        y0 = 0.0
+
+    kT = float(ns) / (2*np.pi*R*l)
+
+    A = -2*kT*n**2*ns*pi*rx**2 + (n**4*ns**2*rx**2)/R**2 -\
+        2*kT*n**2*ns*pi*ry**2 + (n**4*ns**2*ry**2)/R**2 +\
+        (n**4*ns**2*rx**2*ry**2)/R**4 -\
+        (n**2*ns**2*y0)/R + 2*kT*ns*pi*R*y0 - (n**2*ns**2*ry**2*y0)/R**3 +\
+        (2*n**4*ns**2*ry**2*y0)/R**3 - 2*kT*n**2*ns*pi*y0**2 +\
+        (n**4*ns**2*ry**2*y0**2)/R**4
+
+    B = -2*k_bb*n**2*ns*pi + 4*EI*kT*pi**2 + 4*CT*kT*n**2*pi**2 -\
+        (2*EI*n**2*ns*pi)/R**2 - (2*CT*n**4*ns*pi)/R**2 +\
+        4*kT*k_bb*pi**2*R**2 - 2*k_uu*n**2*ns*pi*rx**2 -\
+        (2*CT*n**4*ns*pi*rx**2)/R**4 - (2*EI*n**6*ns*pi*rx**2)/R**4 -\
+        2*k_uu*n**2*ns*pi*ry**2 - (2*EI*n**2*ns*pi*ry**2)/R**4 +\
+        (4*EI*n**4*ns*pi*ry**2)/R**4 - (2*EI*n**6*ns*pi*ry**2)/R**4 -\
+        (2*k_bb*n**2*ns*pi*ry**2)/R**2 - (4*k_ub*n**2*ns*pi*ry**2)/R +\
+        4*k_ub*n**2*ns*pi*y0 + (2*CT*n**2*ns*pi*y0)/R**3 -\
+        (2*EI*n**4*ns*pi*y0)/R**3 - (4*CT*n**4*ns*pi*y0)/R**3 +\
+        2*k_uu*ns*pi*R*y0 - 2*k_uu*n**2*ns*pi*y0**2 -\
+        (2*CT*n**4*ns*pi*y0**2)/R**4 - (2*EI*n**6*ns*pi*y0**2)/R**4
+
+    C = -(-((2*EI*n**2*pi)/R**2) - (2*CT*n**2*pi)/R**2 + 2*k_ub*pi*R)**2 +\
+        ((2*CT*n**2*pi)/R**3 + (2*EI*n**4*pi)/R**3 + 2*k_uu*pi*R) *\
+        ((2*EI*pi)/R + (2*CT*n**2*pi)/R + 2*k_bb*pi*R)
+
+    # Solve for the smaller root
+    T_c = (-B - np.sqrt(B**2 - 4*A*C))/(2*A)
+
+    return T_c
+
+
+def calc_Tc_mode_lin(wheel, n, stiff_factor=1.0, tens_stiff=True):
+    'Calculate critical tension for nth mode using linear approximation.'
+
+    k_s = calc_continuum_stiff(wheel, tension=0.0)
+    k_uu = k_s[0, 0] * stiff_factor
+    k_ub = k_s[0, 3] * stiff_factor
+    k_bb = k_s[3, 3] * stiff_factor
+
+    # shortcuts
+    n_s = len(wheel.spokes)
+    R = wheel.rim.radius
+    l = wheel.spokes[0].length
+    EI = wheel.rim.young_mod * wheel.rim.I22
+    EIw = wheel.rim.young_mod * wheel.rim.Iw
+    GJ = wheel.rim.shear_mod * wheel.rim.I11
+    mu = (GJ + EIw*n**2/R**2) / EI
+
+    A = 1 + mu*n**2 + k_bb*R**2/EI
+    B = n**4 + mu*n**2
+    C = 2*n**2*(1 + mu) - k_ub*R**3/EI
+    D = mu*n**2*(n**2 - 1)**2
+
+    if tens_stiff:
+        f_T = n**2 / (n**2 - R/l)
+    else:
+        f_T = 1.0
+
+    T_c = 2*np.pi*EI/(n_s*R**2*n**2*A) * f_T *\
+        (A*k_uu*R**4/EI + B*k_bb*R**2/EI + C*k_ub*R**3/EI + D)
+
+    return T_c
+
+
+def calc_buckling_tension(wheel, tens_stiff=True, stiff_factor=1.0,
+                          quad=False, N=20):
+    'Find minimum critical tension within first N modes.'
+
+    if quad:
+        T_cn = [calc_Tc_mode_quad(wheel, n)
+                for n in range(2, N+1)]
+    else:
+        T_cn = [calc_Tc_mode_lin(wheel, n, tens_stiff=tens_stiff,
+                                 stiff_factor=stiff_factor)
+                for n in range(2, N+1)]
+
+    T_min = min(T_cn)
+    n_min = T_cn.index(T_min) + 2
+
+    return T_min, n_min
 
 
 def calc_continuum_stiff(wheel, tension=0.0):
