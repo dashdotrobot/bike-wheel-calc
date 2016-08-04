@@ -14,7 +14,7 @@ class BicycleWheel:
 
         def __init__(self, radius, area, I11, I22,
                      I33, Iw, young_mod, shear_mod,
-                     sec_type=None, sec_params=None):
+                     sec_type='general', sec_params={}):
             self.radius = radius
             self.area = area
             self.I11 = I11
