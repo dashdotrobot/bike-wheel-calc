@@ -3,6 +3,20 @@
 'Tools for continuum analysis (a la Pippard) of bicycle wheels.'
 
 import numpy as np
+from bikewheelcalc import BicycleWheel
+
+
+def rand_orth_vector(v):
+    'Find a random unit vector orthogonal to v.'
+
+    # Generate a random vector u
+    n = np.random.random_sample(v.shape)
+
+    # Subtract the projection of v
+    n = n - n.dot(v) * v / v.dot(v)
+
+    # Normalize n to a unit vector
+    return n / np.sqrt(n.dot(n))
 
 
 def calc_buckling_tension(wheel, approx=None, N=20):
@@ -109,15 +123,29 @@ def calc_continuum_stiff(wheel, tension=0.0):
     def k_spoke(s):
         'Stiffness matrix for a single spoke.'
 
-        d = s.rim_pt[2]
-        n = np.append(s.n, 0)
+        # Spoke vectors
+        n1 = s.n
+        n2 = rand_orth_vector(n1)
+        n3 = np.cross(n1, n2)
+        e3 = np.array([0.0, 0.0, 1.0])
 
-        k_sp = s.EA / s.length * np.outer(n, n) +\
-            tension / s.length * np.diag([1, 1, 1, 0])
+        # Spoke nipple vector
+        b = np.array([s.rim_pt[2], s.rim_pt[0] - wheel.rim.radius, 0.0])
 
-        k_sp[0:3, 3] = d * k_sp[0:3, 1]
-        k_sp[3, 0:3] = d * k_sp[0:3, 1]
-        k_sp[3, 3] = d**2 * k_sp[1, 1]
+        k_f = (s.EA/s.length) * np.outer(n1, n1) + \
+            (tension/s.length) * (np.outer(n2, n2) + np.outer(n3, n3))
+
+        dFdphi = k_f.dot(np.cross(e3, b).reshape((3, 1))) +\
+            tension * e3.dot(np.cross(np.cross(e3, b), n1)) +\
+            tension/s.length * e3.dot(np.cross(b, np.cross(e3, b)))
+        dTdphi = (s.EA/s.length) * (e3.dot(np.cross(b, n1)))**2
+
+        k_sp = np.zeros((4, 4))
+        k_sp[0:3, 0:3] = k_f
+
+        k_sp[0:3, 3] = dFdphi.reshape((3))
+        k_sp[3, 0:3] = dFdphi.reshape(3)
+        k_sp[3, 3] = dTdphi
 
         return k_sp
 
@@ -187,3 +215,17 @@ def print_continuum_stats(wheel):
     print 'R/le (rad)   :', np.power(calc_lambda_rad(wheel), 0.25)
     print 'Pn_lat       :', calc_Pn_lat(wheel)
     print 'Pn_rad       :', calc_Pn_rad(wheel)
+
+
+# Testing code
+if False:
+    wheel = BicycleWheel()
+    wheel.hub = wheel.Hub(diam1=0.04, width1=0.025)
+
+    wheel.rim = wheel.Rim(radius=0.3, area=100e-6,
+                          I11=1000e-12, I22=1000e-12, I33=1000e-12, Iw=0.0e-12,
+                          young_mod=69.0e9, shear_mod=26.0e9)
+
+    wheel.lace_radial(n_spokes=36, diameter=1.0e-3, young_mod=210e9, offset=0.0)
+
+    print calc_continuum_stiff(wheel, tension=0.0)
