@@ -65,8 +65,8 @@ class AbaqusModel:
         for i in self.i_spoke_nips:
             out_str += ' {:5d}\n'.format(i+1)
 
-        out_str += '*TRANSFORM, nset=nsetSpokeNip, type=C'
-        out_str += '\n 0, 0, 0, 0, 0, 1.0\n'
+        # out_str += '*TRANSFORM, nset=nsetSpokeNip, type=C'
+        # out_str += '\n 0, 0, 0, 0, 0, 1.0\n'
 
         return out_str
 
