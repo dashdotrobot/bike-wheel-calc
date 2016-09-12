@@ -217,6 +217,77 @@ def print_continuum_stats(wheel):
     print 'Pn_rad       :', calc_Pn_rad(wheel)
 
 
+def mode_stiff(wheel, n, tension=0.0):
+    'Calculate stiffness for the nth mode.'
+
+    k_s = calc_continuum_stiff(wheel, tension)
+    k_uu = k_s[0, 0]
+    k_ub = k_s[0, 3]
+    k_bb = k_s[3, 3]
+
+    # shortcuts
+    pi = np.pi
+    ns = len(wheel.spokes)
+    R = wheel.rim.radius
+    # l = wheel.spokes[0].length
+    EI = wheel.rim.young_mod * wheel.rim.I22
+    EIw = wheel.rim.young_mod * wheel.rim.Iw
+    GJ = wheel.rim.shear_mod * wheel.rim.I11
+
+    rx = np.sqrt(wheel.rim.I22 / wheel.rim.area)
+    ry = np.sqrt(wheel.rim.I33 / wheel.rim.area)
+
+    CT = GJ + EIw*n**2/R**2
+
+    # Shear center coordinate
+    if 'y_s' in wheel.rim.sec_params:
+        y0 = wheel.rim.sec_params['y_c'] -\
+            wheel.rim.sec_params['y_s']
+    else:
+        y0 = 0.0
+
+    Nr = ns*tension / (2*pi)
+
+    if n == 0:
+        U_uu = 2*pi*R*k_uu
+        U_ub = 2*pi*R*k_ub
+        U_bb = 2*pi*EI/R + 2*pi*R*k_bb + 2*pi*Nr*y0
+    else:  # n > 0
+        U_uu = pi*EI*n**4/R**3 + pi*CT*n**2/R**3 + pi*R*k_uu \
+            - 2*pi*Nr*n**2/(2*R) - 2*pi*Nr*n**2*ry**2/R**3
+
+        U_ub = -pi*EI*n**2/R**2 - pi*CT*n**2/R**2 + pi*R*k_ub \
+            + 2*pi*Nr*n**2*ry**2/R**2 - 2*pi*Nr*n**2*y0/R
+
+        U_bb = pi*EI/R + pi*CT*n**2/R + pi*R*k_bb\
+            + 2*pi*Nr*y0 - 2*pi*Nr*n**2*(rx**2 + ry**2 + y0**2)/R
+
+    # Solve linear system
+    K = np.zeros((2, 2))
+    K[0, 0] = U_uu
+    K[0, 1] = U_ub
+    K[1, 0] = U_ub
+    K[1, 1] = U_bb
+
+    x = np.linalg.solve(K, np.array([1, 0]))
+    Kn = 1.0 / x[0]
+
+    return Kn
+
+
+def lateral_stiffness(wheel, N=20, tension=0.0):
+    'Calculate lateral stiffness for a point load in N/m.'
+
+    Fn = np.zeros(N)  # flexibility of nth mode
+
+    for n in range(len(Fn)):
+        Fn[n] = 1.0 / mode_stiff(wheel, n, tension)
+
+    K_lateral = 1.0 / sum(Fn)
+
+    return K_lateral
+
+
 # Testing code
 if False:
     wheel = BicycleWheel()
