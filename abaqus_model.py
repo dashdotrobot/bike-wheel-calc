@@ -110,12 +110,14 @@ class AbaqusModel:
         out_str = '*ELEMENT, type={:s}, elset={:s}\n     1,     1,     2\n'\
             .format(eltype, elset)
         out_str += ' {:5d}, {:5d},     1\n'.format(n_rim_nodes, n_rim_nodes)
+
         out_str += '*ELGEN, elset={:s}\n     1, {:5d}\n'\
             .format(elset, n_rim_nodes-1)
 
         return out_str
 
-    def write_spoke_elems(self, elset='elsetSpokes'):
+    def write_spoke_elems(self, elset='elsetSpokes', eltype='B31'):
+        self.spoke_eltype = eltype
         out_str = ''
 
         for s in range(len(self.wheel.spokes)):
@@ -123,13 +125,16 @@ class AbaqusModel:
             side = (-np.sign(self.wheel.spokes[s].hub_pt[2])+1)/2 + 1
             elset_s = elset + '{:d}'.format(int(side))
 
-            out_str += '*ELEMENT, type=B31, elset={:s}\n'.format(elset_s)
+            out_str += '*ELEMENT, type={eltype:s}, elset={elset:s}\n'\
+                .format(eltype=eltype, elset=elset_s)
             out_str += '{elnum:d}, {n1:d}, {n2:d}\n'\
                 .format(elnum=1000 + s+1, n1=1000 + s+1, n2=2000 + s+1)
-            out_str += '*ELGEN, elset={:s}\n'.format(elset_s)
-            out_str += '{mel:d}, {nel:d}, {ninc:d}, {einc:d}\n'\
-                .format(mel=1000 + s+1, nel=self.n_spk,
-                        ninc=1000, einc=1000)
+
+            if self.n_spk > 1:
+                out_str += '*ELGEN, elset={:s}\n'.format(elset_s)
+                out_str += '{mel:d}, {nel:d}, {ninc:d}, {einc:d}\n'\
+                    .format(mel=1000 + s+1, nel=self.n_spk,
+                            ninc=1000, einc=1000)
 
         # Add all spokes to primary elset
         out_str += '*ELSET, elset={:s}\n{:s}, {:s}\n'.format(elset,
@@ -143,7 +148,7 @@ class AbaqusModel:
 
         for s in range(len(self.wheel.spokes)):
             out_str += '*PRE-TENSION SECTION, node={:d}, element={:d}\n'\
-                .format(99000 + s+1, 2000 + s+1)
+                .format(99000 + s+1, 1000 + s+1)
 
         return out_str
 
@@ -173,8 +178,12 @@ class AbaqusModel:
         r = self.wheel.rim
         s = self.wheel.spokes[0]
 
-        out_str = '*BEAM SECTION, elset=elsetSpokes, material=steel'
-        out_str += ', section=CIRC\n{:e}\n0.,0.,-1.\n'.format(s.diameter/2)
+        if self.spoke_eltype[0].lower() == 'b':  # beam elements
+            out_str = '*BEAM SECTION, elset=elsetSpokes, material=steel'
+            out_str += ', section=CIRC\n{:e}\n0.,0.,-1.\n'.format(s.diameter/2)
+        elif self.spoke_eltype[0].lower() == 't':  # truss element
+            out_str = '*SOLID SECTION, elset=elsetSpokes, material=steel\n'
+            out_str += '{:e}\n'.format(np.pi/4 * s.diameter**2)
 
         out_str += '*MATERIAL, name=steel\n*ELASTIC\n {:e}, 0.33\n'\
             .format(s.EA / (np.pi/4 * s.diameter**2))
