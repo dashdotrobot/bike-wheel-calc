@@ -6,19 +6,6 @@ import numpy as np
 from bikewheelcalc import BicycleWheel
 
 
-def rand_orth_vector(v):
-    'Find a random unit vector orthogonal to v.'
-
-    # Generate a random vector u
-    n = np.random.random_sample(v.shape)
-
-    # Subtract the projection of v
-    n = n - n.dot(v) * v / v.dot(v)
-
-    # Normalize n to a unit vector
-    return n / np.sqrt(n.dot(n))
-
-
 def calc_buckling_tension(wheel, approx=None, N=20):
     'Find minimum critical tension within first N modes.'
 
@@ -33,7 +20,7 @@ def calc_buckling_tension(wheel, approx=None, N=20):
         else:
             y0 = 0.0
 
-        kT = float(ns) / (2*np.pi*R*l)
+        kT = float(ns) / (2*np.pi*R*ls)
 
         A = -2*kT*n**2*ns*pi*rx**2 + (n**4*ns**2*rx**2)/R**2 -\
             2*kT*n**2*ns*pi*ry**2 + (n**4*ns**2*ry**2)/R**2 +\
@@ -74,7 +61,7 @@ def calc_buckling_tension(wheel, approx=None, N=20):
         C = 2*n**2*(1 + mu) - k_ub*R**3/EI
         D = mu*n**2*(n**2 - 1)**2
 
-        f_T = n**2 / (n**2 - R/l)
+        f_T = n**2 / (n**2 - R/ls)
 
         T_c = 2*pi*EI/(ns*R**2*n**2*A) * f_T *\
             (A*k_uu*R**4/EI + B*k_bb*R**2/EI + C*k_ub*R**3/EI + D)
@@ -90,7 +77,7 @@ def calc_buckling_tension(wheel, approx=None, N=20):
     pi = np.pi
     ns = len(wheel.spokes)
     R = wheel.rim.radius
-    l = wheel.spokes[0].length
+    ls = wheel.spokes[0].length
     EI = wheel.rim.young_mod * wheel.rim.I22
     EIw = wheel.rim.young_mod * wheel.rim.Iw
     GJ = wheel.rim.shear_mod * wheel.rim.I11
@@ -119,6 +106,18 @@ def calc_buckling_tension(wheel, approx=None, N=20):
 
 
 def calc_continuum_stiff(wheel, tension=0.0):
+
+    def rand_orth_vector(v):
+        'Find a random unit vector orthogonal to v.'
+
+        # Generate a random vector u
+        n = np.random.random_sample(v.shape)
+
+        # Subtract the projection of v
+        n = n - n.dot(v) * v / v.dot(v)
+
+        # Normalize n to a unit vector
+        return n / np.sqrt(n.dot(n))
 
     def k_spoke(s):
         'Stiffness matrix for a single spoke.'
@@ -270,9 +269,17 @@ def mode_stiff(wheel, n, tension=0.0):
     K[1, 1] = U_bb
 
     x = np.linalg.solve(K, np.array([1, 0]))
-    Kn = 1.0 / x[0]
 
-    return Kn
+    # Displacement stiffness
+    Kn_u = 1.0 / x[0]
+
+    # Rotation stiffness
+    if x[1] == 0.0:
+        Kn_p = float('inf')
+    else:
+        Kn_p = 1.0 / x[1]
+
+    return Kn_u, Kn_p
 
 
 def lateral_stiffness(wheel, N=20, tension=0.0):
@@ -281,11 +288,24 @@ def lateral_stiffness(wheel, N=20, tension=0.0):
     Fn = np.zeros(N)  # flexibility of nth mode
 
     for n in range(len(Fn)):
-        Fn[n] = 1.0 / mode_stiff(wheel, n, tension)
+        Fn[n] = 1.0 / mode_stiff(wheel, n, tension)[0]
 
     K_lateral = 1.0 / sum(Fn)
 
     return K_lateral
+
+
+def lateral_stiffness_phi(wheel, N=20, tension=0.0):
+    'Calculate the lateral/rotation stiffness P/phi for a point load.'
+
+    Fn = np.zeros(N)  # flexibility of nth mode
+
+    for n in range(len(Fn)):
+        Fn[n] = 1.0 / mode_stiff(wheel, n, tension)[1]
+
+    K_lateral_phi = 1.0 / sum(Fn)
+
+    return K_lateral_phi
 
 
 # Testing code
@@ -300,3 +320,6 @@ if False:
     wheel.lace_radial(n_spokes=36, diameter=1.0e-3, young_mod=210e9, offset=0.0)
 
     print calc_continuum_stiff(wheel, tension=0.0)
+
+    print (lateral_stiffness_phi(wheel, 20, 0.0) /
+           lateral_stiffness(wheel, 20, 0.0)) / wheel.rim.radius
