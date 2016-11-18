@@ -134,6 +134,7 @@ class BicycleWheel:
         def __init__(self, rim_pt, hub_pt, diameter, young_mod):
             self.EA = np.pi / 4 * diameter**2 * young_mod
             self.diameter = diameter
+            self.young_mod = young_mod
 
             self.rim_pt = rim_pt  # (R, theta, offset)
             self.hub_pt = hub_pt  # (R, theta, z)
