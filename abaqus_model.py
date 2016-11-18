@@ -208,6 +208,17 @@ class AbaqusModel:
 
         return out_str
 
+    def write_bc_fix_hub(self):
+        'Write ENCASTRE boundary conditions for hub nodes.'
+
+        return '*BOUNDARY\n nsetHub, ENCASTRE\n'
+
+    def write_heading(self, heading):
+        'Write a nicely formatted section heading.'
+
+        return ('** ' + (50*'-') + '\n** -- {:s}\n** ' + (50*'-') + '\n')\
+            .format(heading)
+
     def __init__(self, wheel, max_curve=0.1, n_spk=10):
         self.wheel = wheel
         self.max_curve = max_curve
