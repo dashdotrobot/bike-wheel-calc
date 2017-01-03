@@ -141,6 +141,11 @@ class AbaqusModel:
                                                              elset+'1',
                                                              elset+'2')
 
+        # Create element set containing one element from each spoke
+        out_str += '*ELSET, elset=elsetSpokesRef, generate\n'
+        out_str += ' {0:d}, {1:d}, {2:d}\n'\
+            .format(1001, 1000 + len(self.wheel.spokes), 1)
+
         return out_str
 
     def write_pretension_section(self):
