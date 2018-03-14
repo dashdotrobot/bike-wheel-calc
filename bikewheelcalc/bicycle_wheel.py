@@ -135,6 +135,7 @@ class BicycleWheel:
             self.EA = np.pi / 4 * diameter**2 * young_mod
             self.diameter = diameter
             self.young_mod = young_mod
+            self.tension = 0.
 
             self.rim_pt = rim_pt  # (R, theta, offset)
             self.hub_pt = hub_pt  # (R, theta, z)
@@ -145,12 +146,13 @@ class BicycleWheel:
             dw = hub_pt[0]*np.sin(hub_pt[1] - rim_pt[1])
 
             self.length = np.sqrt(du**2 + dv**2 + dw**2)
-            self.alpha = np.arcsin(du / self.length)
-            self.phi = np.arctan(dw / dv)
 
-            self.n = np.array([np.cos(self.phi) * np.sin(self.alpha),
-                               np.cos(self.phi) * np.cos(self.alpha),
-                               np.sin(self.phi)])
+            # Spoke axial unit vector
+            self.n = np.array([du, dv, dw]) / self.length
+
+            # Approximate projected angles
+            self.alpha = np.arctan(du / dv)
+            self.beta = np.arctan(dw / dv)
 
     def lace_radial(self, n_spokes, diameter, young_mod, offset=0.0):
         'Generate spokes in a radial spoke pattern.'
@@ -178,6 +180,11 @@ class BicycleWheel:
 
             spoke = self.Spoke(rim_pt, hub_pt, diameter, young_mod)
             self.spokes.append(spoke)
+
+    def apply_tension(self, T_avg):
+        'Apply tension to spokes based on average radial tension.'
+
+        pass
 
     def calc_mass(self):
         'Calculate total mass of the wheel in kilograms.'
