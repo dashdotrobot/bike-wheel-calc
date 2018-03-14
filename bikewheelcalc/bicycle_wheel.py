@@ -131,6 +131,12 @@ class BicycleWheel:
             hub_pt: location of the hub eyelet as (R, theta, z)
         """
 
+        def calc_k(self, tension=True):
+            """Calculate matrix relating force and moment at rim due to the
+            spoke under a rim displacement (u,v,w) and rotation phi"""
+
+            pass
+
         def __init__(self, rim_pt, hub_pt, diameter, young_mod):
             self.EA = np.pi / 4 * diameter**2 * young_mod
             self.diameter = diameter
@@ -184,7 +190,20 @@ class BicycleWheel:
     def apply_tension(self, T_avg):
         'Apply tension to spokes based on average radial tension.'
 
-        pass
+        # Assume that there are only two tensions in the wheel: left and right
+        # and that spokes alternate left, right, left, right...
+        s_0 = self.spokes[0]
+        s_1 = self.spokes[1]
+        T_0 = 2 * T_avg * np.abs(s_1.n[0]) /\
+            (np.abs(s_0.n[0]*s_1.n[1]) + np.abs(s_1.n[0]*s_0.n[1]))
+        T_1 = 2 * T_avg * np.abs(s_0.n[0]) /\
+            (np.abs(s_0.n[0]*s_1.n[1]) + np.abs(s_1.n[0]*s_0.n[1]))
+
+        for i in range(0, len(self.spokes), 2):
+            self.spokes[i].tension = T_0
+
+        for i in range(1, len(self.spokes), 2):
+            self.spokes[i].tension = T_1
 
     def calc_mass(self):
         'Calculate total mass of the wheel in kilograms.'
