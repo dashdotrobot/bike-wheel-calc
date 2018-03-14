@@ -135,7 +135,36 @@ class BicycleWheel:
             """Calculate matrix relating force and moment at rim due to the
             spoke under a rim displacement (u,v,w) and rotation phi"""
 
-            pass
+            n = self.n                      # spoke vector
+            e3 = np.array([0.0, 0.0, 1.0])  # rim axial vector
+
+            # Spoke nipple offset vector (relative to shear center)
+            # TODO: Correctly calculate v-component of b_s based on rim radius.
+            #       Set to zero for now.
+            b = np.array([self.rim_pt[2], 0.0, 0.0])
+
+            T = self.tension
+            K_e = self.EA / self.length
+            K_t = self.tension / self.length
+
+            k_f = K_e*np.outer(n, n) + K_t*(np.eye(3) - np.outer(n, n))
+
+            # Change in force applied by spoke due to rim rotation, phi
+            dFdphi = k_f.dot(np.cross(e3, b).reshape((3, 1)))
+
+            # Change in torque applied to rim by spoke due to rim rotation, phi
+            dTdphi = (K_e * (e3.dot(np.cross(b, n)))**2 +
+                      T * e3.dot(np.cross(np.cross(e3, b), n)) +
+                      K_t * e3.dot(np.cross(b, np.cross(e3, b))))
+
+            k = np.zeros((4, 4))
+
+            k[0:3, 0:3] = k_f
+            k[0:3, 3] = dFdphi.reshape((3))
+            k[3, 0:3] = dFdphi.reshape(3)
+            k[3, 3] = dTdphi
+
+            return k
 
         def __init__(self, rim_pt, hub_pt, diameter, young_mod):
             self.EA = np.pi / 4 * diameter**2 * young_mod
