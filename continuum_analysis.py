@@ -105,54 +105,18 @@ def calc_buckling_tension(wheel, approx=None, N=20):
     return T_c, n_c
 
 
-def calc_continuum_stiff(wheel, tension=0.0):
+def calc_continuum_stiff(wheel, tension=None):
+    'Calculate smeared-spoke stiffness matrix.'
 
-    def rand_orth_vector(v):
-        'Find a random unit vector orthogonal to v.'
+    if tension is not None:
+        wheel.apply_tension(tension)
 
-        # Generate a random vector u
-        n = np.random.random_sample(v.shape)
+    k_bar = np.zeros((4, 4))
 
-        # Subtract the projection of v
-        n = n - n.dot(v) * v / v.dot(v)
+    for s in wheel.spokes:
+        k_bar = k_bar + s.calc_k()/(2*np.pi*wheel.rim.radius)
 
-        # Normalize n to a unit vector
-        return n / np.sqrt(n.dot(n))
-
-    def k_spoke(s):
-        'Stiffness matrix for a single spoke.'
-
-        # Spoke vectors
-        n1 = s.n
-        n2 = rand_orth_vector(n1)
-        n3 = np.cross(n1, n2)
-        e3 = np.array([0.0, 0.0, 1.0])
-
-        # Spoke nipple vector
-        b = np.array([s.rim_pt[2], s.rim_pt[0] - wheel.rim.radius, 0.0])
-
-        k_f = (s.EA/s.length) * np.outer(n1, n1) + \
-            (tension/s.length) * (np.outer(n2, n2) + np.outer(n3, n3))
-
-        dFdphi = k_f.dot(np.cross(e3, b).reshape((3, 1))) +\
-            tension * e3.dot(np.cross(np.cross(e3, b), n1)) +\
-            tension/s.length * e3.dot(np.cross(b, np.cross(e3, b)))
-        dTdphi = (s.EA/s.length) * (e3.dot(np.cross(b, n1)))**2
-
-        k_sp = np.zeros((4, 4))
-        k_sp[0:3, 0:3] = k_f
-
-        k_sp[0:3, 3] = dFdphi.reshape((3))
-        k_sp[3, 0:3] = dFdphi.reshape(3)
-        k_sp[3, 3] = dTdphi
-
-        return k_sp
-
-    s1 = wheel.spokes[0]
-    s2 = wheel.spokes[1]
-
-    return len(wheel.spokes) / (4*np.pi*wheel.rim.radius) * \
-        (k_spoke(s1) + k_spoke(s2))
+    return k_bar
 
 
 def calc_Pn_lat(wheel):
