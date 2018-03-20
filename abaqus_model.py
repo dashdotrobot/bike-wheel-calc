@@ -177,24 +177,33 @@ class AbaqusModel:
 
         return out_str
 
-    def write_beam_sections(self):
+    def write_beam_sections(self, alpha1=1.0, alpha2=1.0):
         'Write material and beam section block for rim and spokes.'
 
         r = self.wheel.rim
-        s = self.wheel.spokes[0]
+        s1 = self.wheel.spokes[0]
+        s2 = self.wheel.spokes[1]
 
         if self.spoke_eltype[0].lower() == 'b':  # beam elements
-            out_str = '*BEAM SECTION, elset=elsetSpokes, material=steel'
-            out_str += ', section=CIRC\n{:e}\n0.,0.,-1.\n'.format(s.diameter/2)
+            out_str = '*BEAM SECTION, elset=elsetSpokes1, material=steel1'
+            out_str += ', section=CIRC\n{:e}\n0.,0.,-1.\n'.format(s1.diameter/2)
+            out_str += '*BEAM SECTION, elset=elsetSpokes2, material=steel2'
+            out_str += ', section=CIRC\n{:e}\n0.,0.,-1.\n'.format(s2.diameter/2)
         elif self.spoke_eltype[0].lower() == 't':  # truss element
-            out_str = '*SOLID SECTION, elset=elsetSpokes, material=steel\n'
-            out_str += '{:e}\n'.format(np.pi/4 * s.diameter**2)
+            out_str = '*SOLID SECTION, elset=elsetSpokes, material=steel1\n'
+            out_str += '{:e}\n'.format(np.pi/4 * s1.diameter**2)
 
-        out_str += '*MATERIAL, name=steel\n*ELASTIC\n {:e}, 0.33\n'\
-            .format(s.EA / (np.pi/4 * s.diameter**2))
+        out_str += '*MATERIAL, name=steel1\n*ELASTIC\n {:e}, 0.33\n'\
+            .format(s1.EA / (np.pi/4 * s1.diameter**2))
         out_str += '*DENSITY\n 8050.0\n'
         out_str += '*DAMPING, alpha={:e}\n'.format(1000.0)
-        out_str += '*EXPANSION, type=iso\n {:e}\n'.format(1.0)
+        out_str += '*EXPANSION, type=iso\n {:e}\n'.format(alpha1)
+
+        out_str += '*MATERIAL, name=steel2\n*ELASTIC\n {:e}, 0.33\n'\
+            .format(s2.EA / (np.pi/4 * s2.diameter**2))
+        out_str += '*DENSITY\n 8050.0\n'
+        out_str += '*DAMPING, alpha={:e}\n'.format(1000.0)
+        out_str += '*EXPANSION, type=iso\n {:e}\n'.format(alpha2)
 
         out_str += '*BEAM GENERAL SECTION, elset=elsetRim, '
         out_str += 'section=GENERAL, density=2700.0\n'
