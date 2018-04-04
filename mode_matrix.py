@@ -10,23 +10,30 @@ from continuum_analysis import calc_buckling_tension
 class ModeMatrix:
     """Solve coupled lateral, radial, and torsional deflections."""
 
-    def B_theta(self, theta):
+    def B_theta(self, theta=[0.], comps=[0, 1, 2, 3]):
         'Matrix to transform mode coefficients to vector components.'
 
-        B = np.zeros((4, 4 + 8*self.n_modes))
+        # Convert scalar values to arrays
+        theta = np.atleast_1d(theta)
+        comps = np.atleast_1d(comps)
 
-        B[0, 0] = 1.
-        B[1, 1] = 1.
-        B[2, 2] = 1.
-        B[3, 3] = 1.
+        B = np.zeros((len(theta)*len(comps), 4 + 8*self.n_modes))
 
-        for n in range(1, self.n_modes + 1):
-            c = np.cos(n*theta)
-            s = np.sin(n*theta)
+        # For each angle theta
+        for it in range(len(theta)):
 
-            for i in range(4):
-                B[i, 4 + (n-1)*8 + 2*i] = c
-                B[i, 4 + (n-1)*8 + 2*i+1] = s
+            # Zero mode
+            for ic, c in enumerate(comps):
+                B[len(comps)*it + ic, c] = 1.
+
+            # Higher modes
+            for n in range(1, self.n_modes + 1):
+                cos_ni = np.cos(n*theta[it])
+                sin_ni = np.sin(n*theta[it])
+
+                for ic, c in enumerate(comps):
+                    B[len(comps)*it + ic, 4 + 8*(n-1) + 2*c] = cos_ni
+                    B[len(comps)*it + ic, 4 + 8*(n-1) + 2*c+1] = sin_ni
 
         return B
 
