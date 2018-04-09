@@ -130,8 +130,8 @@ def calc_Pn_lat(wheel):
     GJ = wheel.rim.shear_mod * wheel.rim.I11
     cc = (GJ/EI)/(GJ/EI + 1)
 
-    Pn_lat = n_spokes/(2*np.pi*wheel.rim.radius) *\
-        np.power(4*EI / k_uu, 0.25) * cc
+    Pn_lat = n_spokes/(8*np.pi*wheel.rim.radius) *\
+        np.power(4*EI * cc / k_uu, 0.25)
 
     return Pn_lat
 
