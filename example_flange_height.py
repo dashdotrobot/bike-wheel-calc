@@ -1,5 +1,5 @@
 import bikewheelcalc as bc
-import matplotlib.pyplot as pp
+import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -42,13 +42,13 @@ for d in diam_flange:
 
     rot_stiff.append(soln.nodal_rxn[r_rim.node_id, 5])
 
-pp.plot(diam_flange * 100, rot_stiff, 'ro')
-pp.xlabel('flange diameter [cm]')
-pp.ylabel('wind-up stiffness [N-m / degree]')
+plt.plot(diam_flange * 100, rot_stiff, 'ro')
+plt.xlabel('flange diameter [cm]')
+plt.ylabel('wind-up stiffness [N-m / degree]')
 
 print 'flange diam [cm] | rotational stiffness [N-m/degree]'
 print '----------------------------------------------------'
 for d, r in zip(diam_flange, rot_stiff):
     print '{0:11.1f}      | {1:4.3e}'.format(d*100, r)
 
-pp.show()
+plt.show()

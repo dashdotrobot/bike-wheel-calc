@@ -1,5 +1,5 @@
 import bikewheelcalc as bc
-import matplotlib.pyplot as pp
+import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -85,19 +85,19 @@ print '\n\n'
 print 'wheel | rotational [N-m/degree] | radial [N/m] | lateral [N/m]'
 print '--------------------------------------------------------------'
 for i in range(len(wheels)):
-    print '  {i:2d}          {r:5.3e}             {d:5.3e}      {l:4.3e}'.format(i=i, r=stiff_rot[i], d=stiff_rad[i], l=stiff_lat[i])
+    print '  {i:2d}          {r:5.3e}             {rad:5.3e}      {lat:4.3e}'\
+        .format(i=i, r=stiff_rot[i], rad=stiff_rad[i], lat=stiff_lat[i])
 
 # Create bar graphs of stiffnesses
-pp.bar(range(len(stiff_rot)), stiff_rot)
-pp.ylabel('Rotational stiffness [N-m / degree]')
+plt.bar(range(len(stiff_rot)), stiff_rot)
+plt.ylabel('Rotational stiffness [N-m / degree]')
 
-pp.figure()
-pp.bar(range(len(stiff_rad)), stiff_rad)
-pp.ylabel('Radial stiffness [N-m]')
+plt.figure()
+plt.bar(range(len(stiff_rad)), stiff_rad)
+plt.ylabel('Radial stiffness [N-m]')
 
-pp.figure()
-pp.bar(range(len(stiff_lat)), stiff_lat)
-pp.ylabel('Lateral stiffness [N-m]')
+plt.figure()
+plt.bar(range(len(stiff_lat)), stiff_lat)
+plt.ylabel('Lateral stiffness [N-m]')
 
-
-pp.show()
+plt.show()
