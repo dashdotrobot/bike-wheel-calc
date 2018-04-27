@@ -9,17 +9,17 @@ wheels = [bc.BicycleWheel() for i in range(5)]
 for i, w in enumerate(wheels):
 
     # Create hub
-    w.hub = w.Hub(diam1=0.04, width1=0.03)
+    w.hub = bc.Hub(diam1=0.04, width1=0.03)
 
     # Create rim
-    w.rim = w.Rim.general(radius=0.3,
-                          area=82.0e-6,
-                          I11=5620e-12,
-                          I22=1187e-12,
-                          I33=1124e-12,
-                          Iw=0.0,
-                          young_mod=69.0e9,
-                          shear_mod=26.0e9)
+    w.rim = bc.Rim.general(radius=0.3,
+                           area=82.0e-6,
+                           I11=5620e-12,
+                           I22=1187e-12,
+                           I33=1124e-12,
+                           Iw=0.0,
+                           young_mod=69.0e9,
+                           shear_mod=26.0e9)
 
     # Generate spoking pattern
     w.lace_cross(n_spokes=36, n_cross=i, diameter=2.0e-3,
@@ -67,8 +67,8 @@ for w in wheels:
     # Remove forces and boundary conditions
     fem.remove_bc(range(fem.n_nodes), range(6))
 
-
-    # Calculate rotational stiffness. Fix both hub and rim and rotate the hub
+    # Calculate rotational stiffness
+    # Fix both hub and rim and rotate the hub
     r_rim = bc.RigidBody('rim', [0, 0, 0], fem.get_rim_nodes())
     fem.add_rigid_body(r_rim)
 
