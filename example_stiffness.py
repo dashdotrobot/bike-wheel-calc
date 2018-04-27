@@ -3,7 +3,66 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-# Create 5 wheels
+def calc_rad_stiff(wheel):
+    'Calculate radial stiffness.'
+
+    fem = bc.BicycleWheelFEM(w)
+
+    # Create a rigid body to constrain the hub nodes
+    r_hub = bc.RigidBody('hub', [0, 0, 0], fem.get_hub_nodes())
+    fem.add_rigid_body(r_hub)
+
+    # Calculate radial stiffness. Apply an upward force to the bottom node
+    fem.add_constraint(r_hub.node_id, range(6))
+    fem.add_force(0, 1, 1)
+
+    soln = fem.solve()
+    return 1.0 / np.abs(soln.nodal_disp[0, 1])
+
+
+def calc_lat_stiff(wheel):
+    'Calculate lateral (side-load) stiffness.'
+
+    fem = bc.BicycleWheelFEM(wheel)
+
+    # Create a rigid body to constrain the hub nodes
+    r_hub = bc.RigidBody('hub', [0, 0, 0], fem.get_hub_nodes())
+    fem.add_rigid_body(r_hub)
+
+    # Calculate lateral stiffness. Apply a sideways force to the bottom node
+    fem.add_constraint(r_hub.node_id, range(6))
+    fem.add_force(0, 2, 1.0)
+
+    soln = fem.solve()
+    return 1.0 / np.abs(soln.nodal_disp[0, 2])
+
+
+def calc_rot_stiff(wheel):
+    'Calculate rotational (wind-up) stiffness.'
+
+    fem = bc.BicycleWheelFEM(wheel)
+
+    # Create a rigid body to constrain the hub nodes
+    r_hub = bc.RigidBody('hub', [0, 0, 0], fem.get_hub_nodes())
+    fem.add_rigid_body(r_hub)
+
+    # Fix both hub and rim and rotate the hub
+    r_rim = bc.RigidBody('rim', [0, 0, 0], fem.get_rim_nodes())
+    fem.add_rigid_body(r_rim)
+
+    fem.add_constraint(r_rim.node_id, range(6))   # fix rim
+    fem.add_constraint(r_hub.node_id, [2, 3, 4])  # fix hub z, roll, and yaw
+
+    fem.add_constraint(r_hub.node_id, 5, np.pi/180)  # rotate hub by 1 degree
+
+    soln = fem.solve()
+    return soln.nodal_rxn[r_rim.node_id, 5]
+
+
+# Create 5 wheels with different lacing patterns:
+# 0 = radial spokes
+# 1 = 1-cross
+# 2 = 2-cross ... etc
 wheels = [bc.BicycleWheel() for i in range(5)]
 
 for i, w in enumerate(wheels):
@@ -25,60 +84,20 @@ for i, w in enumerate(wheels):
     w.lace_cross(n_spokes=36, n_cross=i, diameter=2.0e-3,
                  young_mod=210e9, offset=0.0)
 
+
+# Radial stiffness is the ratio of a radial force applied to the rim, to the
+# resulting displacement. The hub is rigidly clamped.
+stiff_rad = [calc_rad_stiff(w) for w in wheels]  # Units: [N/m]
+
+# Lateral stiffness is the ratio of a force applied to the rim parallel to
+# the axle, to the resulting displacement. The hub is rigidly clamped.
+stiff_lat = [calc_lat_stiff(w) for w in wheels]  # Units: [N/m]
+
 # Rotational stiffness is the ratio of applied torque to hub twist in degrees.
 # This can be calculated by twisting the hub a fixed amount and measuring the
 # torque. Alternatively, one could apply a fixed torque and measure the degree
 # of hub twist.
-stiff_rot = []  # Units: [N-m / degree]
-
-# Lateral stiffness is the ratio of a force applied to the rim parallel to
-# the axle, to the resulting displacement. The hub is rigidly clamped.
-stiff_lat = []  # Units: [N/m]
-
-# Radial stiffness is the ratio of a radial force applied to the rim, to the
-# resulting displacement. The hub is rigidly clamped.
-stiff_rad = []  # Units: [N/m]
-
-for w in wheels:
-
-    fem = bc.BicycleWheelFEM(w)
-
-    # Create a rigid body to constrain the hub nodes
-    r_hub = bc.RigidBody('hub', [0, 0, 0], fem.get_hub_nodes())
-    fem.add_rigid_body(r_hub)
-
-    # Calculate radial stiffness. Apply an upward force to the bottom node
-    fem.add_constraint(r_hub.node_id, range(6))
-    fem.add_force(0, 1, 1)
-
-    soln = fem.solve()
-    stiff_rad.append(1.0 / np.abs(soln.nodal_disp[0, 1]))
-
-    # Remove forces and boundary conditions
-    fem.remove_bc(range(fem.n_nodes), range(6))
-
-    # Calculate lateral stiffness. Apply a sideways force to the bottom node
-    fem.add_constraint(r_hub.node_id, range(6))
-    fem.add_force(0, 2, 1.0)
-
-    soln = fem.solve()
-    stiff_lat.append(1.0 / np.abs(soln.nodal_disp[0, 2]))
-
-    # Remove forces and boundary conditions
-    fem.remove_bc(range(fem.n_nodes), range(6))
-
-    # Calculate rotational stiffness
-    # Fix both hub and rim and rotate the hub
-    r_rim = bc.RigidBody('rim', [0, 0, 0], fem.get_rim_nodes())
-    fem.add_rigid_body(r_rim)
-
-    fem.add_constraint(r_rim.node_id, range(6))   # fix rim
-    fem.add_constraint(r_hub.node_id, [2, 3, 4])  # fix hub z, roll, and yaw
-
-    fem.add_constraint(r_hub.node_id, 5, np.pi/180)  # rotate by 1 degree
-
-    soln = fem.solve()
-    stiff_rot.append(soln.nodal_rxn[r_rim.node_id, 5])
+stiff_rot = [calc_rot_stiff(w) for w in wheels]  # Units: [N-m / degree]
 
 # Print a table of stiffnesses
 print '\n\n'
