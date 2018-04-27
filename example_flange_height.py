@@ -1,18 +1,18 @@
 import bikewheelcalc as bc
-import matplotlib.pyplot as pp
+import matplotlib.pyplot as plt
 import numpy as np
 
 
 # Create an example wheel and rim
 wheel = bc.BicycleWheel()
-wheel.rim = wheel.Rim.general(radius=0.3,
-                              area=82.0e-6,
-                              I11=5620e-12,
-                              I22=1187e-12,
-                              I33=1124e-12,
-                              Iw=0.0,
-                              young_mod=69.0e9,
-                              shear_mod=26.0e9)
+wheel.rim = bc.Rim.general(radius=0.3,
+                           area=82.0e-6,
+                           I11=5620e-12,
+                           I22=1187e-12,
+                           I33=1124e-12,
+                           Iw=0.0,
+                           young_mod=69.0e9,
+                           shear_mod=26.0e9)
 
 diam_flange = np.linspace(0.01, 0.1, 10)
 
@@ -21,7 +21,7 @@ rot_stiff = []
 for d in diam_flange:
 
     # Create hub and spokes for each flange diameter
-    wheel.hub = wheel.Hub(diam1=d, width1=0.03)
+    wheel.hub = bc.Hub(diam1=d, width1=0.03)
     wheel.lace_cross(n_spokes=36, n_cross=3, diameter=2.0e-3,
                      young_mod=210e9, offset=0.0)
 
@@ -42,13 +42,13 @@ for d in diam_flange:
 
     rot_stiff.append(soln.nodal_rxn[r_rim.node_id, 5])
 
-pp.plot(diam_flange * 100, rot_stiff, 'ro')
-pp.xlabel('flange diameter [cm]')
-pp.ylabel('wind-up stiffness [N-m / degree]')
+plt.plot(diam_flange * 100, rot_stiff, 'ro')
+plt.xlabel('flange diameter [cm]')
+plt.ylabel('wind-up stiffness [N-m / degree]')
 
 print 'flange diam [cm] | rotational stiffness [N-m/degree]'
 print '----------------------------------------------------'
 for d, r in zip(diam_flange, rot_stiff):
     print '{0:11.1f}      | {1:4.3e}'.format(d*100, r)
 
-pp.show()
+plt.show()
