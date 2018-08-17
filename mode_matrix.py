@@ -153,8 +153,7 @@ class ModeMatrix:
 
         return F_ext.flatten()
 
-    def calc_lat_stiff(self, smeared_spokes=True, buckling=False,
-                       coupling=True):
+    def calc_lat_stiff(self, smeared_spokes=True, buckling=False, coupling=True):
         'Calculate lateral stiffness.'
 
         F_ext = self.calc_F_ext([0.], np.array([[1., 0., 0., 0.]]))
@@ -174,6 +173,27 @@ class ModeMatrix:
             d[ix_uc] = d_uc
 
         return 1.0 / self.B_theta(0.).dot(d)[0]
+
+    def calc_rad_stiff(self, smeared_spokes=True, buckling=False, coupling=True):
+        'Calculate radial stiffness.'
+
+        F_ext = self.calc_F_ext([0.], np.array([[0., 1., 0., 0.]]))
+        d = np.zeros(F_ext.shape)
+
+        if coupling:
+            K = self.calc_K_rim(buckling=buckling) +\
+                self.calc_K_spk(smeared_spokes=smeared_spokes)
+            d = np.linalg.solve(K, F_ext)
+        else:
+            ix_uc = self.calc_ix_uncoupled(dim='radial')
+            F_ext = F_ext[ix_uc]
+            K = self.calc_K_uncoupled(dim='radial',
+                                      smeared_spokes=smeared_spokes,
+                                      buckling=buckling)
+            d_uc = np.linalg.solve(K, F_ext)
+            d[ix_uc] = d_uc
+
+        return 1.0 / self.B_theta(0.).dot(d)[1]
 
     def calc_ix_uncoupled(self, dim='lateral'):
         'Get indices for either lateral/torsional or radial/tangential modes.'
