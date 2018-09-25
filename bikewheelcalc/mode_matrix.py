@@ -217,7 +217,7 @@ class ModeMatrix:
 
         return Kn_u
 
-    def calc_lat_stiff(self, smeared_spokes=True, buckling=False, coupling=False):
+    def calc_lat_stiff(self, smeared_spokes=True, buckling=True, coupling=False):
         'Calculate lateral stiffness.'
 
         F_ext = self.F_ext([0.], np.array([[1., 0., 0., 0.]]))
