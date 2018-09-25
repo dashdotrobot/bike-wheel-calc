@@ -1,8 +1,8 @@
 import numpy as np
-from femsolution import FEMSolution
-from helpers import *
-from bicycle_wheel import *
-from rigidbody import *
+from .femsolution import FEMSolution
+from .helpers import *
+from .bicycle_wheel import *
+from .rigidbody import *
 
 EL_RIM = 1
 EL_SPOKE = 2

@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from helpers import pol2rect
+from .helpers import pol2rect
 
 
 class Rim:

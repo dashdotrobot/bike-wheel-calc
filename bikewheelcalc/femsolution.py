@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as pp
 import copy
 from scipy import interpolate
-from helpers import *
+from .helpers import *
 
 EL_RIM = 1
 EL_SPOKE = 2
