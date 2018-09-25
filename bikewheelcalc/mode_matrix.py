@@ -4,7 +4,7 @@
 
 import numpy as np
 from scipy.optimize import minimize
-from .continuum_analysis import calc_buckling_tension
+from .continuum_analysis import calc_buckling_tension, calc_continuum_stiff
 
 
 class ModeMatrix:
@@ -152,6 +152,70 @@ class ModeMatrix:
             F_ext = F_ext + Bi.dot(f[i, :].reshape((4, 1)))
 
         return F_ext.flatten()
+
+    def lat_mode_stiff(self, n, smeared_spokes=True, buckling=False):
+        'Calculate lateral mode stiffness'
+
+        k_s = calc_continuum_stiff(self.wheel)
+        k_uu = k_s[0, 0]
+        k_ub = k_s[0, 3]
+        k_bb = k_s[3, 3]
+
+        # shortcuts
+        pi = np.pi
+        ns = len(self.wheel.spokes)
+        R = self.wheel.rim.radius
+        EI = self.wheel.rim.young_mod * self.wheel.rim.I22
+        EIw = self.wheel.rim.young_mod * self.wheel.rim.Iw
+        GJ = self.wheel.rim.shear_mod * self.wheel.rim.I11
+
+        rx = np.sqrt(self.wheel.rim.I22 / self.wheel.rim.area)
+        ry = np.sqrt(self.wheel.rim.I33 / self.wheel.rim.area)
+
+        CT = GJ + EIw*n**2/R**2
+
+        # Shear center coordinate
+        if 'y_s' in self.wheel.rim.sec_params:
+            y0 = self.wheel.rim.sec_params['y_c'] -\
+                self.wheel.rim.sec_params['y_s']
+        else:
+            y0 = 0.0
+
+        Nr = np.sum([s.tension*s.n[1] for s in self.wheel.spokes]) / (2*pi)
+
+        if n == 0:
+            U_uu = 2*pi*R*k_uu
+            U_ub = 2*pi*R*k_ub
+            U_bb = 2*pi*EI/R + 2*pi*R*k_bb + 2*pi*Nr*y0
+        else:  # n > 0
+            U_uu = pi*EI*n**4/R**3 + pi*CT*n**2/R**3 + pi*R*k_uu \
+                - pi*Nr*n**2/R - pi*Nr*n**2*ry**2/R**3
+
+            U_ub = -pi*EI*n**2/R**2 - pi*CT*n**2/R**2 + pi*R*k_ub \
+                - pi*Nr*n**2*ry**2/R**2 - pi*Nr*n**2*y0/R
+
+            U_bb = pi*EI/R + pi*CT*n**2/R + pi*R*k_bb\
+                + pi*Nr*y0 - pi*Nr*n**2*(rx**2 + ry**2 + y0**2)/R
+
+        # Solve linear system
+        K = np.zeros((2, 2))
+        K[0, 0] = U_uu
+        K[0, 1] = U_ub
+        K[1, 0] = U_ub
+        K[1, 1] = U_bb
+
+        x = np.linalg.solve(K, np.array([1, 0]))
+
+        # Displacement stiffness
+        Kn_u = 1.0 / x[0]
+
+        # Rotation stiffness
+        if x[1] == 0.0:
+            Kn_p = float('inf')
+        else:
+            Kn_p = 1.0 / x[1]
+
+        return Kn_u
 
     def calc_lat_stiff(self, smeared_spokes=True, buckling=False, coupling=True):
         'Calculate lateral stiffness.'
