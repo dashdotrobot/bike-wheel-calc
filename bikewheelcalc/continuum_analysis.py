@@ -172,12 +172,12 @@ def calc_lambda_rad(wheel):
 def print_continuum_stats(wheel):
     'Print summary information about the wheel.'
 
-    print 'lambda (lat) :', calc_lambda_lat(wheel)
-    print 'lambda (rad) :', calc_lambda_rad(wheel)
-    print 'R/le (lat)   :', np.power(calc_lambda_lat(wheel), 0.25)
-    print 'R/le (rad)   :', np.power(calc_lambda_rad(wheel), 0.25)
-    print 'Pn_lat       :', calc_Pn_lat(wheel)
-    print 'Pn_rad       :', calc_Pn_rad(wheel)
+    print('lambda (lat) :', calc_lambda_lat(wheel))
+    print('lambda (rad) :', calc_lambda_rad(wheel))
+    print('R/le (lat)   :', np.power(calc_lambda_lat(wheel), 0.25))
+    print('R/le (rad)   :', np.power(calc_lambda_rad(wheel), 0.25))
+    print('Pn_lat       :', calc_Pn_lat(wheel))
+    print('Pn_rad       :', calc_Pn_rad(wheel))
 
 
 def mode_stiff(wheel, n, tension=0.0):
@@ -271,20 +271,3 @@ def lateral_stiffness_phi(wheel, N=20, tension=0.0):
     K_lateral_phi = 1.0 / sum(Fn)
 
     return K_lateral_phi
-
-
-# Testing code
-if False:
-    wheel = BicycleWheel()
-    wheel.hub = wheel.Hub(diam1=0.04, width1=0.025)
-
-    wheel.rim = wheel.Rim(radius=0.3, area=100e-6,
-                          I11=1000e-12, I22=1000e-12, I33=1000e-12, Iw=0.0e-12,
-                          young_mod=69.0e9, shear_mod=26.0e9)
-
-    wheel.lace_radial(n_spokes=36, diameter=1.0e-3, young_mod=210e9, offset=0.0)
-
-    print calc_continuum_stiff(wheel, tension=0.0)
-
-    print (lateral_stiffness_phi(wheel, 20, 0.0) /
-           lateral_stiffness(wheel, 20, 0.0)) / wheel.rim.radius
