@@ -153,7 +153,7 @@ class ModeMatrix:
 
         return F_ext.flatten()
 
-    def lat_mode_stiff(self, n, smeared_spokes=True, buckling=False):
+    def lat_mode_stiff(self, n, smeared_spokes=True, buckling=True):
         'Calculate lateral mode stiffness'
 
         k_s = calc_continuum_stiff(self.wheel)
@@ -217,7 +217,7 @@ class ModeMatrix:
 
         return Kn_u
 
-    def calc_lat_stiff(self, smeared_spokes=True, buckling=False, coupling=True):
+    def calc_lat_stiff(self, smeared_spokes=True, buckling=False, coupling=False):
         'Calculate lateral stiffness.'
 
         F_ext = self.F_ext([0.], np.array([[1., 0., 0., 0.]]))
@@ -238,7 +238,7 @@ class ModeMatrix:
 
         return 1.0 / self.B_theta(0.).dot(d)[0]
 
-    def calc_rad_stiff(self, smeared_spokes=True, buckling=False, coupling=True):
+    def calc_rad_stiff(self, smeared_spokes=True, buckling=False, coupling=False):
         'Calculate radial stiffness.'
 
         F_ext = self.F_ext([0.], np.array([[0., 1., 0., 0.]]))
