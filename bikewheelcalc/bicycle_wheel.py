@@ -139,7 +139,6 @@ class Spoke:
         #       Set to zero for now.
         b = np.array([self.rim_pt[2], 0.0, 0.0])
 
-        T = self.tension
         K_e = self.EA / self.length
         K_t = self.tension / self.length
 
@@ -148,10 +147,8 @@ class Spoke:
         # Change in force applied by spoke due to rim rotation, phi
         dFdphi = k_f.dot(np.cross(e3, b).reshape((3, 1)))
 
-        # Change in torque applied to rim by spoke due to rim rotation, phi
-        dTdphi = (K_e * (e3.dot(np.cross(b, n)))**2 +
-                  T * e3.dot(np.cross(np.cross(e3, b), n)) +
-                  K_t * e3.dot(np.cross(b, np.cross(e3, b))))
+        # Change in torque applied by spoke due to rim rotation
+        dTdphi = np.cross(b, e3).dot(k_f).dot(np.cross(b, e3))
 
         k = np.zeros((4, 4))
 
