@@ -209,7 +209,8 @@ def mode_stiff(wheel, n, tension=0.0):
     else:
         y0 = 0.0
 
-    Nr = ns*tension / (2*pi)
+    # Nr = ns*tension / (2*pi)
+    Nr = np.sum([s.tension*s.n[1] for s in wheel.spokes]) / (2*pi)
 
     if n == 0:
         U_uu = 2*pi*R*k_uu
@@ -217,13 +218,13 @@ def mode_stiff(wheel, n, tension=0.0):
         U_bb = 2*pi*EI/R + 2*pi*R*k_bb + 2*pi*Nr*y0
     else:  # n > 0
         U_uu = pi*EI*n**4/R**3 + pi*CT*n**2/R**3 + pi*R*k_uu \
-            - 2*pi*Nr*n**2/(2*R) - 2*pi*Nr*n**2*ry**2/R**3
+            - pi*Nr*n**2/R - pi*Nr*n**2*ry**2/R**3
 
         U_ub = -pi*EI*n**2/R**2 - pi*CT*n**2/R**2 + pi*R*k_ub \
-            + 2*pi*Nr*n**2*ry**2/R**2 - 2*pi*Nr*n**2*y0/R
+            - pi*Nr*n**2*ry**2/R**2 - pi*Nr*n**2*y0/R
 
         U_bb = pi*EI/R + pi*CT*n**2/R + pi*R*k_bb\
-            + 2*pi*Nr*y0 - 2*pi*Nr*n**2*(rx**2 + ry**2 + y0**2)/R
+            + pi*Nr*y0 - pi*Nr*n**2*(rx**2 + ry**2 + y0**2)/R
 
     # Solve linear system
     K = np.zeros((2, 2))

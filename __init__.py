@@ -1,3 +1,3 @@
 from continuum_analysis import *
-from rayleighritz import RayleighRitzDiscrete
+from mode_matrix import *
 from stiffcalc import *
