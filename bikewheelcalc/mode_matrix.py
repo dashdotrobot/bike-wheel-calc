@@ -252,8 +252,8 @@ class ModeMatrix:
             ix_uc = self.get_ix_uncoupled(dim='radial')
             F_ext = F_ext[ix_uc]
             K = self.get_K_uncoupled(dim='radial',
-                                      smeared_spokes=smeared_spokes,
-                                      buckling=buckling)
+                                     smeared_spokes=smeared_spokes,
+                                     buckling=buckling)
             d_uc = np.linalg.solve(K, F_ext)
             d[ix_uc] = d_uc
 
@@ -264,16 +264,16 @@ class ModeMatrix:
 
         if dim == 'lateral':
             ix = np.sort([0, 3] +
-                         range(4, 4 + 8*self.n_modes, 8) +   # u_c
-                         range(5, 4 + 8*self.n_modes, 8) +   # u_s
-                         range(10, 4 + 8*self.n_modes, 8) +  # phi_c
-                         range(11, 4 + 8*self.n_modes, 8))   # phi_s
+                         list(range(4, 4 + 8*self.n_modes, 8)) +   # u_c
+                         list(range(5, 4 + 8*self.n_modes, 8)) +   # u_s
+                         list(range(10, 4 + 8*self.n_modes, 8)) +  # phi_c
+                         list(range(11, 4 + 8*self.n_modes, 8)))   # phi_s
         else:
             ix = np.sort([1, 2] +
-                         range(6, 4 + 8*self.n_modes, 8) +   # v_c
-                         range(7, 4 + 8*self.n_modes, 8) +   # v_s
-                         range(8, 4 + 8*self.n_modes, 8) +   # w_c
-                         range(9, 4 + 8*self.n_modes, 8))    # w_s
+                         list(range(6, 4 + 8*self.n_modes, 8)) +   # v_c
+                         list(range(7, 4 + 8*self.n_modes, 8)) +   # v_s
+                         list(range(8, 4 + 8*self.n_modes, 8)) +   # w_c
+                         list(range(9, 4 + 8*self.n_modes, 8)))    # w_s
 
         return ix
 
