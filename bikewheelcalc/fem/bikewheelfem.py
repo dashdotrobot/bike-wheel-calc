@@ -1,8 +1,7 @@
 import numpy as np
 from .femsolution import FEMSolution
-from .helpers import *
-from .bicycle_wheel import *
 from .rigidbody import *
+from ..helpers import *
 
 EL_RIM = 1
 EL_SPOKE = 2
@@ -696,37 +695,3 @@ class BicycleWheelFEM:
 
         # solution arrays
         self.soln_updated = False
-
-# Testing code
-if False:
-
-    w = BicycleWheel()
-    w.hub = w.Hub(diam1=0.04, width1=0.025)
-    w.rim = w.Rim.general(radius=0.3,
-                          area=100e-6,
-                          I11=1000e-12,
-                          I22=1000e-12,
-                          I33=1000e-12,
-                          Iw=0.0,
-                          young_mod=69.0e9,
-                          shear_mod=26.0e9)
-
-    # w.lace_radial(n_spokes=36, diameter=1.5e-3, young_mod=210e9, offset=0.0)
-    w.lace_cross(n_spokes=36, n_cross=3, diameter=1.5e-3,
-                 young_mod=210e9, offset=0.0)
-
-    fem = BicycleWheelFEM(w, verbose=True)
-
-    # Create a rigid body to constrain the hub nodes
-    r_hub = RigidBody('hub', [0, 0, 0], fem.get_hub_nodes())
-    fem.add_rigid_body(r_hub)
-
-    # Calculate radial stiffness. Apply an upward force to the bottom node
-    fem.add_constraint(r_hub.node_id, range(6))
-    fem.add_force(0, 1, 500)
-
-    soln = fem.solve(pretension=1000)
-
-    rim_bend_moment = [soln.el_stress[i][5] for i in range(36)]
-    pp.plot(rim_bend_moment)
-    pp.show()
