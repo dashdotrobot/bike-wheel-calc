@@ -25,7 +25,6 @@ def std_ncross():
     return _build_wheel
 
 
-
 # -----------------------------------------------------------------------------
 # Hub tests
 # -----------------------------------------------------------------------------
@@ -57,6 +56,7 @@ def test_hub_asymm_offset():
 
     assert np.allclose(h.width_left, 0.035)
     assert np.allclose(h.width_right, 0.015)
+
 
 # -----------------------------------------------------------------------------
 # Wheel tests
@@ -99,6 +99,7 @@ def test_calc_k(std_ncross, n_cross):
     d_geom = np.append(np.array([1., 0., 0.]) -
                        np.dot(np.array([1., 0., 0.]), s.n)*s.n,
                        0.)
+    d_geom = d_geom / np.sqrt(d_geom[0]**2 + d_geom[1]**2 + d_geom[2]**2)
     dF_geom = k.dot(d_geom)
 
     assert np.allclose(np.dot(dF_geom[:3], s.n), 0.)
@@ -161,6 +162,6 @@ def test_apply_tension(std_ncross, n_cross):
     w = std_ncross(n_cross)
     w.apply_tension(100.0)
 
-    Tbar = np.sum([s.n[1]*s.tension for s in w.spokes]) / len(w.spokes)
+    Tavg = np.sum([s.n[1]*s.tension for s in w.spokes]) / len(w.spokes)
 
-    assert np.allclose(Tbar, 100.0)
+    assert np.allclose(Tavg, 100.0)
