@@ -94,29 +94,48 @@ class Rim:
 
 
 class Hub:
-    """Hub definition.
+    """Hub consisting of two parallel, circular flanges.
 
     Args:
-        diam1: diameter of drive-side flange.
-        diam2: diameter of left-side flange.
-        width1: distance from rim plane to drive-side flange midplane.
-        width2: distance from rim plane to left-side flange midplane.
+        diameter_left: diameter of the left-side hub flange.
+        diameter_right: diameter of the drive-side hub flange.
+        width_left: distance from rim plane to left-side flange.
+        width_right: distance from rim plane to drive-side flange.
+
+    Usage:
+        Symmetric:           Hub(diameter=0.05, width=0.05)
+        Asymmetric, specify: Hub(diameter=0.05, width_left=0.03, width_right=0.02)
+        Asymmetric, offset:  Hub(diameter_left=0.04, diameter_right=0.06, width=0.05, offset=0.01)
     """
 
-    def __init__(self, diam1=None, diam2=None, width1=None, width2=None):
-        self.width1 = width1
-        self.diam1 = diam1
-        self.width2 = width2
-        self.diam2 = diam2
+    def __init__(self, diameter=None, diameter_left=None, diameter_right=None,
+                 width=None, width_left=None, width_right=None, offset=None):
 
-        if diam2 is None:
-            self.diam2 = diam1
+        # Set flange diameters
+        self.diameter_left = diameter
+        self.diameter_right = diameter
 
-        if width2 is None:
-            self.width2 = width1
+        if isinstance(diameter_left, float):
+            self.diameter_left = diameter_left
+        if isinstance(diameter_right, float):
+            self.diameter_right = diameter_right
 
-        self.radius1 = self.diam1 / 2
-        self.radius2 = self.diam2 / 2
+        # Set flange widths
+        if isinstance(width, float):
+            if offset is None:
+                offset = 0.
+
+            self.width_left = width/2 + offset
+            self.width_right = width/2 - offset
+
+            if (width_left is not None) or (width_right is not None):
+                raise ValueError('Cannot specify width_left or width_right when using the offset parameter.')
+
+        elif isinstance(width_left, float) and isinstance(width_right, float):
+            self.width_left = width_left
+            self.width_right = width_right
+        else:
+            raise ValueError('width_left and width_right must both be defined if not using the width parameter.')
 
 
 class Spoke:

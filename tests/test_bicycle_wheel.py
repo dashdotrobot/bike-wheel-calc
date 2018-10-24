@@ -1,4 +1,5 @@
 import pytest
+import numpy as np
 from bikewheelcalc import BicycleWheel, Rim, Hub
 
 
@@ -38,25 +39,25 @@ def test_hub_symm():
 
     h = Hub(diameter=0.05, width=0.05)
 
-    assert h.width_left == 0.025
-    assert h.width_right == 0.025
     assert h.diameter_left == 0.05
     assert h.diameter_right == 0.05
+    assert np.allclose(h.width_left, 0.025)
+    assert np.allclose(h.width_right, 0.025)
 
 def test_hub_asymm():
     'Initialize an asymmetric hub using two explicit diameters and widths'
 
     h = Hub(diameter_left=0.04, diameter_right=0.06, width_left=0.03, width_right=0.02)
 
-    assert h.width_left == 0.03
-    assert h.width_right == 0.02
     assert h.diameter_left == 0.04
     assert h.diameter_right == 0.06
+    assert h.width_left == 0.03
+    assert h.width_right == 0.02
 
 def test_hub_asymm_offset():
     'Initialize an asymmetric hub using a width and an offset'
 
     h = Hub(diameter=0.05, width=0.05, offset=0.01)
 
-    assert h.width_left == 0.035
-    assert h.widtH_right == 0.015
+    assert np.allclose(h.width_left, 0.035)
+    assert np.allclose(h.width_right, 0.015)
