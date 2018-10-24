@@ -310,3 +310,5 @@ class BicycleWheel:
 
     def __init__(self):
         self.spokes = []
+        self.rim = None
+        self.hub = None
