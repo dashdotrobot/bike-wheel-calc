@@ -104,10 +104,11 @@ def test_calc_k(std_ncross, n_cross):
     assert np.allclose(np.dot(dF_geom[:3], s.n), 0.)
     assert np.allclose(np.sqrt(np.dot(dF_geom, dF_geom)), k_T_theor)
 
-def test_calc_kbar(std_ncross):
+@pytest.mark.parametrize('n_cross', [0, 1, 2, 3])
+def test_calc_kbar_symm_nooffset(std_ncross, n_cross):
     'Compare kbar for radial spokes against theory'
 
-    w = std_ncross(3)
+    w = std_ncross(n_cross)
 
     c1, c2, c3 = w.spokes[0].n
     l = w.spokes[0].length
@@ -120,3 +121,15 @@ def test_calc_kbar(std_ncross):
     kbar = w.calc_kbar(tension=False)
 
     assert np.allclose(kbar, kbar_theor)
+
+@pytest.mark.parametrize('offset', [-0.05, -0.01, 0., 0.01, 0.05])
+def test_calc_kbar_offset_zero_eig(std_ncross, offset):
+    'Check that u-phi submatrix has a zero eigenvalue'
+
+    w = std_ncross(1)
+    w.lace_radial(n_spokes=36, diameter=1.8e-3, young_mod=210e9, offset=offset)
+
+    kbar = w.calc_kbar(tension=False)
+    w, v = np.linalg.eig(kbar[np.ix_([0, 3], [0, 3])])
+
+    assert np.allclose(np.min(w), 0.)
