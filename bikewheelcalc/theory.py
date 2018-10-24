@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-'Tools for continuum analysis (a la Pippard) of bicycle wheels.'
+'Tools for theoretical calculations on bicycle wheels.'
 
 import numpy as np
 from bikewheelcalc import BicycleWheel
