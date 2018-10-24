@@ -230,9 +230,9 @@ class BicycleWheel:
 
             theta_hub = theta_rim + 2*n_cross*s_dir * (2*np.pi/n_spokes)
             if side == 1:
-                hub_pt = (self.hub.radius1, theta_hub, self.hub.width1)
+                hub_pt = (self.hub.diameter_right/2, theta_hub, self.hub.width_right)
             else:
-                hub_pt = (self.hub.radius2, theta_hub, -self.hub.width2)
+                hub_pt = (self.hub.diameter_left/2, theta_hub, -self.hub.width_left)
 
             spoke = Spoke(rim_pt, hub_pt, diameter, young_mod)
             self.spokes.append(spoke)
@@ -292,11 +292,11 @@ class BicycleWheel:
                                  linewidth=opts_d['rim_width']))
 
         # Draw hub
-        ax.add_artist(plt.Circle((0, 0), (self.hub.diam2/2)/R, fill=False,
+        ax.add_artist(plt.Circle((0, 0), (self.hub.diameter_left/2)/R, fill=False,
                                  color=opts_d['hub_ls_color'],
                                  linewidth=opts_d['hub_ls_width'],
                                  zorder=-1))
-        ax.add_artist(plt.Circle((0, 0), (self.hub.diam1/2)/R, fill=False,
+        ax.add_artist(plt.Circle((0, 0), (self.hub.diameter_right/2)/R, fill=False,
                                  color=opts_d['hub_ds_color'],
                                  linewidth=opts_d['hub_ds_width'],
                                  zorder=1))
