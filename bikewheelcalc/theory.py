@@ -105,20 +105,6 @@ def calc_buckling_tension(wheel, approx=None, N=20):
     return T_c, n_c
 
 
-def calc_continuum_stiff(wheel, tension=None):
-    'Calculate smeared-spoke stiffness matrix.'
-
-    if tension is not None:
-        wheel.apply_tension(tension)
-
-    k_bar = np.zeros((4, 4))
-
-    for s in wheel.spokes:
-        k_bar = k_bar + s.calc_k()/(2*np.pi*wheel.rim.radius)
-
-    return k_bar
-
-
 def calc_Pn_lat(wheel):
     'Lateral Pippard number (ratio of length scale to spoke spacing).'
 

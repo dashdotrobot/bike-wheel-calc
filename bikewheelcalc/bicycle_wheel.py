@@ -255,6 +255,16 @@ class BicycleWheel:
         for i in range(1, len(self.spokes), 2):
             self.spokes[i].tension = T_1
 
+    def calc_kbar(self, tension=True):
+        'Calculate smeared-spoke stiffness matrix'
+
+        k_bar = np.zeros((4, 4))
+
+        for s in self.spokes:
+            k_bar = k_bar + s.calc_k(tension=tension)/(2*np.pi*self.rim.radius)
+
+        return k_bar
+
     def calc_mass(self):
         'Calculate total mass of the wheel in kilograms.'
 
