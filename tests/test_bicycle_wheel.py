@@ -86,7 +86,7 @@ def test_calc_k(std_ncross, n_cross):
     k = s.calc_k(tension=True)
 
     k_EA_theor = 210e9*np.pi/4*(1.8e-3)**2 / s.length
-    k_T_theor = 100. / s.length
+    k_T_theor = s.tension / s.length
 
     # Material stiffness
     d_matl = np.append(s.n, 0.)
@@ -104,4 +104,19 @@ def test_calc_k(std_ncross, n_cross):
     assert np.allclose(np.dot(dF_geom[:3], s.n), 0.)
     assert np.allclose(np.sqrt(np.dot(dF_geom, dF_geom)), k_T_theor)
 
-# Test calc_kbar() method for the entire wheel
+def test_calc_kbar(std_ncross):
+    'Compare kbar for radial spokes against theory'
+
+    w = std_ncross(3)
+
+    c1, c2, c3 = w.spokes[0].n
+    l = w.spokes[0].length
+    Ks = 210e9*np.pi/4*(1.8e-3)**2 / w.spokes[0].length
+    R = 0.3
+    ns = 36
+
+    kbar_theor = ns*Ks/(2*np.pi*R) * np.diag([c1**2, c2**2, c3**2, 0.])
+
+    kbar = w.calc_kbar(tension=False)
+
+    assert np.allclose(kbar, kbar_theor)
