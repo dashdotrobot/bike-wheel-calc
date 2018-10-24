@@ -102,7 +102,19 @@ def test_calc_k(std_ncross, n_cross):
     dF_geom = k.dot(d_geom)
 
     assert np.allclose(np.dot(dF_geom[:3], s.n), 0.)
-    assert np.allclose(np.sqrt(np.dot(dF_geom, dF_geom)), k_T_theor)
+    # assert np.allclose(np.sqrt(np.dot(dF_geom, dF_geom)), k_T_theor)
+
+def test_calc_k_geom(std_ncross):
+    'Check that calc_k() and calc_k_geom() are consistent'
+
+    w = std_ncross(0)
+    w.apply_tension(100.)
+
+    s = w.spokes[0]
+
+    assert np.allclose(s.calc_k(tension=True),
+                       s.calc_k(tension=False) + s.tension*s.calc_k_geom())
+
 
 @pytest.mark.parametrize('n_cross', [0, 1, 2, 3])
 def test_calc_kbar_symm_nooffset(std_ncross, n_cross):
@@ -133,3 +145,16 @@ def test_calc_kbar_offset_zero_eig(std_ncross, offset):
     w, v = np.linalg.eig(kbar[np.ix_([0, 3], [0, 3])])
 
     assert np.allclose(np.min(w), 0.)
+
+def test_calc_kbar_geom(std_ncross):
+    'Check that calc_kbar() and calc_kbar_geom() are consistent'
+
+    w = std_ncross(0)
+    w.apply_tension(1000.)
+
+    kbar_1 = w.calc_kbar(tension=True)
+    kbar_2 = w.calc_kbar(tension=False) + 1000.*w.calc_kbar_geom()
+
+    print(kbar_2[2, 2] / kbar_1[2, 2])
+
+    assert np.allclose(kbar_1, kbar_2)

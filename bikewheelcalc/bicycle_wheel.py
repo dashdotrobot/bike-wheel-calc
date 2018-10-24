@@ -151,17 +151,49 @@ class Spoke:
         spoke under a rim displacement (u,v,w) and rotation phi"""
 
         n = self.n                      # spoke vector
-        e3 = np.array([0.0, 0.0, 1.0])  # rim axial vector
+        e3 = np.array([0., 0., 1.0])  # rim axial vector
 
         # Spoke nipple offset vector (relative to shear center)
         # TODO: Correctly calculate v-component of b_s based on rim radius.
         #       Set to zero for now.
-        b = np.array([self.rim_pt[2], 0.0, 0.0])
+        b = np.array([self.rim_pt[2], 0., 0.])
 
         K_e = self.EA / self.length
-        K_t = self.tension / self.length
+
+        if tension:
+            K_t = self.tension / self.length
+        else:
+            K_t = 0.
 
         k_f = K_e*np.outer(n, n) + K_t*(np.eye(3) - np.outer(n, n))
+
+        # Change in force applied by spoke due to rim rotation, phi
+        dFdphi = k_f.dot(np.cross(e3, b).reshape((3, 1)))
+
+        # Change in torque applied by spoke due to rim rotation
+        dTdphi = np.cross(b, e3).dot(k_f).dot(np.cross(b, e3))
+
+        k = np.zeros((4, 4))
+
+        k[0:3, 0:3] = k_f
+        k[0:3, 3] = dFdphi.reshape((3))
+        k[3, 0:3] = dFdphi.reshape(3)
+        k[3, 3] = dTdphi
+
+        return k
+
+    def calc_k_geom(self):
+        'Calculate the coefficient of the tension-dependent spoke stiffness matrix.'
+
+        n = self.n
+        e3 = np.array([0., 0., 1.])
+
+        # Spoke nipple offset vector (relative to shear center)
+        # TODO: Correctly calculate v-component of b_s based on rim radius.
+        #       Set to zero for now.
+        b = np.array([self.rim_pt[2], 0., 0.])
+
+        k_f = (1./self.length) * (np.eye(3) - np.outer(n, n))
 
         # Change in force applied by spoke due to rim rotation, phi
         dFdphi = k_f.dot(np.cross(e3, b).reshape((3, 1)))
@@ -262,6 +294,22 @@ class BicycleWheel:
 
         for s in self.spokes:
             k_bar = k_bar + s.calc_k(tension=tension)/(2*np.pi*self.rim.radius)
+
+        return k_bar
+
+    def calc_kbar_geom(self):
+        'Calculate smeared-spoke stiffness matrix, geometric component'
+
+        k_bar = np.zeros((4, 4))
+
+        # Get scaling factor for tension on each side of the wheel
+        s_0 = self.spokes[0]
+        s_1 = self.spokes[1]
+        T_d = np.abs(s_0.n[0]*s_1.n[1]) + np.abs(s_1.n[0]*s_0.n[1])
+
+        for s in self.spokes:
+            k_bar = k_bar + \
+                np.abs(s.n[0])/T_d * s.calc_k_geom()/(np.pi*self.rim.radius)
 
         return k_bar
 

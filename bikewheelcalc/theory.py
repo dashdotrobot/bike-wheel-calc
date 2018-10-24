@@ -15,8 +15,7 @@ def calc_buckling_tension(wheel, approx=None, N=20):
         CT = GJ + EIw*n**2/R**2
 
         if 'y_s' in wheel.rim.sec_params:
-            y0 = wheel.rim.sec_params['y_c'] -\
-                wheel.rim.sec_params['y_s']
+            y0 = wheel.rim.sec_params['y_s']
         else:
             y0 = 0.0
 
@@ -29,21 +28,21 @@ def calc_buckling_tension(wheel, approx=None, N=20):
             (2*n**4*ns**2*ry**2*y0)/R**3 - 2*kT*n**2*ns*pi*y0**2 +\
             (n**4*ns**2*ry**2*y0**2)/R**4
 
-        B = -2*k_bb*n**2*ns*pi + 4*EI*kT*pi**2 + 4*CT*kT*n**2*pi**2 -\
+        B = -2*k_pp*n**2*ns*pi + 4*EI*kT*pi**2 + 4*CT*kT*n**2*pi**2 -\
             (2*EI*n**2*ns*pi)/R**2 - (2*CT*n**4*ns*pi)/R**2 +\
-            4*kT*k_bb*pi**2*R**2 - 2*k_uu*n**2*ns*pi*rx**2 -\
+            4*kT*k_pp*pi**2*R**2 - 2*k_uu*n**2*ns*pi*rx**2 -\
             (2*CT*n**4*ns*pi*rx**2)/R**4 - (2*EI*n**6*ns*pi*rx**2)/R**4 -\
             2*k_uu*n**2*ns*pi*ry**2 - (2*EI*n**2*ns*pi*ry**2)/R**4 +\
             (4*EI*n**4*ns*pi*ry**2)/R**4 - (2*EI*n**6*ns*pi*ry**2)/R**4 -\
-            (2*k_bb*n**2*ns*pi*ry**2)/R**2 - (4*k_ub*n**2*ns*pi*ry**2)/R +\
-            4*k_ub*n**2*ns*pi*y0 + (2*CT*n**2*ns*pi*y0)/R**3 -\
+            (2*k_pp*n**2*ns*pi*ry**2)/R**2 - (4*k_up*n**2*ns*pi*ry**2)/R +\
+            4*k_up*n**2*ns*pi*y0 + (2*CT*n**2*ns*pi*y0)/R**3 -\
             (2*EI*n**4*ns*pi*y0)/R**3 - (4*CT*n**4*ns*pi*y0)/R**3 +\
             2*k_uu*ns*pi*R*y0 - 2*k_uu*n**2*ns*pi*y0**2 -\
             (2*CT*n**4*ns*pi*y0**2)/R**4 - (2*EI*n**6*ns*pi*y0**2)/R**4
 
-        C = -(-((2*EI*n**2*pi)/R**2) - (2*CT*n**2*pi)/R**2 + 2*k_ub*pi*R)**2 +\
+        C = -(-((2*EI*n**2*pi)/R**2) - (2*CT*n**2*pi)/R**2 + 2*k_up*pi*R)**2 +\
             ((2*CT*n**2*pi)/R**3 + (2*EI*n**4*pi)/R**3 + 2*k_uu*pi*R) *\
-            ((2*EI*pi)/R + (2*CT*n**2*pi)/R + 2*k_bb*pi*R)
+            ((2*EI*pi)/R + (2*CT*n**2*pi)/R + 2*k_pp*pi*R)
 
         # Solve for the smaller root
         T_c = (-B - np.sqrt(B**2 - 4*A*C))/(2*A)
@@ -56,22 +55,22 @@ def calc_buckling_tension(wheel, approx=None, N=20):
         CT = GJ + EIw*n**2/R**2
         mu = CT/EI
 
-        A = 1 + mu*n**2 + k_bb*R**2/EI
+        A = 1 + mu*n**2 + k_pp*R**2/EI
         B = n**4 + mu*n**2
-        C = 2*n**2*(1 + mu) - k_ub*R**3/EI
+        C = 2*n**2*(1 + mu) - k_up*R**3/EI
         D = mu*n**2*(n**2 - 1)**2
 
         f_T = n**2 / (n**2 - R/ls)
 
         T_c = 2*pi*EI/(ns*R**2*n**2*A) * f_T *\
-            (A*k_uu*R**4/EI + B*k_bb*R**2/EI + C*k_ub*R**3/EI + D)
+            (A*k_uu*R**4/EI + B*k_pp*R**2/EI + C*k_up*R**3/EI + D)
 
         return T_c
 
-    k_s = calc_continuum_stiff(wheel, tension=0.0)
+    kbar_matl = wheel.calc_kbar(tension=False)
     k_uu = k_s[0, 0]
-    k_ub = k_s[0, 3]
-    k_bb = k_s[3, 3]
+    k_up = k_s[0, 3]
+    k_pp = k_s[3, 3]
 
     # shortcuts
     pi = np.pi
@@ -86,21 +85,24 @@ def calc_buckling_tension(wheel, approx=None, N=20):
     ry = np.sqrt(wheel.rim.I33 / wheel.rim.area)
 
     if approx == 'linear':
-
         T_cn = [calc_Tc_mode_lin(n) for n in range(2, N+1)]
         T_c = min(T_cn)
         n_c = T_cn.index(T_c) + 2
 
-    elif approx == 'small_mu':
+    elif approx == 'quadratic':
+        T_cn = [calc_Tc_mode_quad(n) for n in range(2, N+1)]
+        T_c = min(T_cn)
+        n_c = T_cn.index(T_c) + 2
 
+    elif approx == 'coupled':
+        pass
+
+    elif approx == 'small_mu':
         T_c = 11.875 * GJ/(ns*R**2) * np.power(k_uu*R**4/GJ, 2.0/3.0)
         n_c = np.power(k_uu*R**4/(2*GJ), 1.0/6.0)
 
     else:
-
-        T_cn = [calc_Tc_mode_quad(n) for n in range(2, N+1)]
-        T_c = min(T_cn)
-        n_c = T_cn.index(T_c) + 2
+        raise ValueError('Unknown approximation: {:s}'.format(approx))
 
     return T_c, n_c
 
@@ -171,8 +173,8 @@ def mode_stiff(wheel, n, tension=0.0):
 
     k_s = calc_continuum_stiff(wheel, tension)
     k_uu = k_s[0, 0]
-    k_ub = k_s[0, 3]
-    k_bb = k_s[3, 3]
+    k_up = k_s[0, 3]
+    k_pp = k_s[3, 3]
 
     # shortcuts
     pi = np.pi
@@ -200,16 +202,16 @@ def mode_stiff(wheel, n, tension=0.0):
 
     if n == 0:
         U_uu = 2*pi*R*k_uu
-        U_ub = 2*pi*R*k_ub
-        U_bb = 2*pi*EI/R + 2*pi*R*k_bb + 2*pi*Nr*y0
+        U_ub = 2*pi*R*k_up
+        U_bb = 2*pi*EI/R + 2*pi*R*k_pp + 2*pi*Nr*y0
     else:  # n > 0
         U_uu = pi*EI*n**4/R**3 + pi*CT*n**2/R**3 + pi*R*k_uu \
             - pi*Nr*n**2/R - pi*Nr*n**2*ry**2/R**3
 
-        U_ub = -pi*EI*n**2/R**2 - pi*CT*n**2/R**2 + pi*R*k_ub \
+        U_ub = -pi*EI*n**2/R**2 - pi*CT*n**2/R**2 + pi*R*k_up \
             - pi*Nr*n**2*ry**2/R**2 - pi*Nr*n**2*y0/R
 
-        U_bb = pi*EI/R + pi*CT*n**2/R + pi*R*k_bb\
+        U_bb = pi*EI/R + pi*CT*n**2/R + pi*R*k_pp\
             + pi*Nr*y0 - pi*Nr*n**2*(rx**2 + ry**2 + y0**2)/R
 
     # Solve linear system
