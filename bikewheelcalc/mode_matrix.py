@@ -4,7 +4,6 @@
 
 import numpy as np
 from scipy.optimize import minimize
-from .continuum_analysis import calc_buckling_tension, calc_continuum_stiff
 
 
 class ModeMatrix:
