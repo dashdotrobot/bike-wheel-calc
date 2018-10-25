@@ -3,6 +3,7 @@
 """Rayleigh-Ritz solution to fully-coupled uvw-phi equations."""
 
 import numpy as np
+from numpy import pi
 from scipy.optimize import minimize
 
 
@@ -39,11 +40,8 @@ class ModeMatrix:
     def K_rim(self, buckling=False):
         'Calculate rim strain energy stiffness matrix.'
 
-        pi = np.pi
-
         w = self.wheel
         R = w.rim.radius                   # rim radius
-        y0 = 0.                            # shear-center offset
         EA = w.rim.young_mod * w.rim.area  # axial stiffness
         EI1 = w.rim.young_mod * w.rim.I33  # radial bending
         EI2 = w.rim.young_mod * w.rim.I22  # lateral bending
@@ -52,13 +50,17 @@ class ModeMatrix:
 
         ry = np.sqrt(EI1/EA)
         rx = np.sqrt(EI2/EA)
-        r2 = rx**2 + ry**2 + y0**2
+
+        y0 = 0.  # shear-center offset
+        if 'y_s' in wheel.rim.sec_params:
+            y0 = wheel.rim.sec_params['y_s']
+
+        r02 = rx**2 + ry**2 + y0**2
 
         # Average net radial tension per unit length
+        Tbar = 0.
         if buckling:
             Tbar = np.sum([s.tension*s.n[1] for s in w.spokes])/(2*pi*R)
-        else:
-            Tbar = 0.
 
         K_rim = np.zeros((4 + self.n_modes*8, 4 + self.n_modes*8))
 
@@ -71,18 +73,16 @@ class ModeMatrix:
             i0 = 4 + (n-1)*8
 
             # k_vv
-            K_rim[i0+2, i0+2] = (EI1*pi/R**3*n**4 + EA*pi/R +
-                                 2*EA*pi/R**2*y0*n**2 + EA*pi/R**3*y0**2*n**4)
+            K_rim[i0+2, i0+2] = EI1*pi/R**3*n**4 + EA*pi/R*(1 + y0/R*n**2)**2
             K_rim[i0+3, i0+3] = K_rim[i0+2, i0+2]
 
             # k_ww
-            K_rim[i0+4, i0+4] = EI1*pi/R**3*n**2 +\
-                EA*pi*(n**2/R + 2*y0*n**2/R**2 + y0**2*n**2/R**3)
+            K_rim[i0+4, i0+4] = EI1*pi/R**3*n**2 + EA*pi/R*(1 + y0/R)**2
             K_rim[i0+5, i0+5] = K_rim[i0+4, i0+4]
 
             # k_vw
             K_rim[i0+2, i0+5] = -EI1*pi/R**3*n**3 -\
-                EA*pi*(n/R + n**3*y0/R**2 + n*y0/R**2 + n**3*y0**2/R**3)
+                EA*pi*n/R*(1 + y0/R*(1 + n**2) + y0**2/R**2*n**2)
             K_rim[i0+5, i0+2] = K_rim[i0+2, i0+5]
             K_rim[i0+3, i0+4] = -K_rim[i0+2, i0+5]
             K_rim[i0+4, i0+3] = -K_rim[i0+2, i0+5]
@@ -90,20 +90,20 @@ class ModeMatrix:
             # k_uu
             K_rim[i0+0, i0+0] = (EI2*pi/R**3*n**4 + EIw*pi/R**5*n**4 +
                                  GJ*pi/R**3*n**2 -
-                                 Tbar*pi*n**2*(1. + ry**2/R**2))
+                                 Tbar*pi*n**2*(1. + r02/R**2))
             K_rim[i0+1, i0+1] = K_rim[i0+0, i0+0]
 
-            # k_ub
+            # k_up
             K_rim[i0+0, i0+6] = -(EI2*pi/R**2*n**2 + EIw*pi/R**4*n**4 +
                                   GJ*pi/R**2*n**2 +
-                                  Tbar*pi*n**2*(y0 + ry**2/R))
+                                  Tbar*pi*n**2*(y0 - r02/R*n**2))
             K_rim[i0+6, i0+0] = K_rim[i0+0, i0+6]
             K_rim[i0+1, i0+7] = K_rim[i0+0, i0+6]
             K_rim[i0+7, i0+1] = K_rim[i0+0, i0+6]
 
-            # k_bb
-            K_rim[i0+6, i0+6] = EI2*pi/R + EIw*pi/R**3*n**4 + GJ*pi/R*n**2 -\
-                Tbar*pi*(n**2*r2 - R*y0)
+            # k_pp
+            K_rim[i0+6, i0+6] = (EI2*pi/R + EIw*pi/R**3*n**4 + GJ*pi/R*n**2 +
+                                 Tbar*pi*(R*y0 - r02*n**2))
             K_rim[i0+7, i0+7] = K_rim[i0+6, i0+6]
 
         return K_rim
