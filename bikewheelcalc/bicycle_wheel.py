@@ -150,8 +150,8 @@ class Spoke:
         """Calculate matrix relating force and moment at rim due to the
         spoke under a rim displacement (u,v,w) and rotation phi"""
 
-        n = self.n                      # spoke vector
-        e3 = np.array([0., 0., 1.0])  # rim axial vector
+        n = self.n                   # spoke vector
+        e3 = np.array([0., 0., 1.])  # rim axial vector
 
         # Spoke nipple offset vector (relative to shear center)
         # TODO: Correctly calculate v-component of b_s based on rim radius.

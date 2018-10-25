@@ -47,16 +47,14 @@ class ModeMatrix:
         EA = w.rim.young_mod * w.rim.area  # axial stiffness
         EI1 = w.rim.young_mod * w.rim.I33  # radial bending
         EI2 = w.rim.young_mod * w.rim.I22  # lateral bending
-        EIw = w.rim.young_mod * w.rim.Iw   # wapring constant
+        EIw = w.rim.young_mod * w.rim.Iw   # warping constant
         GJ = w.rim.shear_mod * w.rim.I11   # torsion constant
 
         ry = np.sqrt(EI1/EA)
         rx = np.sqrt(EI2/EA)
         r2 = rx**2 + ry**2 + y0**2
 
-        # Average compressive force in rim
-        # TODO Accurately calculate for arbitrary geometry
-        # C = -self.n_spokes*self.tension / (2*pi)
+        # Average net radial tension per unit length
         if buckling:
             Tbar = np.sum([s.tension*s.n[1] for s in w.spokes])/(2*pi*R)
         else:
@@ -110,7 +108,7 @@ class ModeMatrix:
 
         return K_rim
 
-    def K_spk(self, smeared_spokes=True):
+    def K_spk(self, smeared_spokes=True, tension=True):
         'Calculate spoke mode stiffness matrix.'
 
         K_spk = np.zeros((4 + self.n_modes*8, 4 + self.n_modes*8))
@@ -119,7 +117,7 @@ class ModeMatrix:
 
             k_avg = np.zeros(4)
             for s in self.wheel.spokes:
-                k_avg = k_avg + s.calc_k()
+                k_avg = k_avg + s.calc_k(tension=tension)
 
             # n = 0
             K_spk[0:4, 0:4] = k_avg
@@ -137,7 +135,7 @@ class ModeMatrix:
 
             for s in self.wheel.spokes:
                 B = self.B_theta(s.rim_pt[1])
-                K_spk = K_spk + B.T.dot(s.calc_k().dot(B))
+                K_spk = K_spk + B.T.dot(s.calc_k(tension=tension).dot(B))
 
             return K_spk
 
@@ -151,112 +149,6 @@ class ModeMatrix:
             F_ext = F_ext + Bi.dot(f[i, :].reshape((4, 1)))
 
         return F_ext.flatten()
-
-    def lat_mode_stiff(self, n, smeared_spokes=True, buckling=True):
-        'Calculate lateral mode stiffness'
-
-        k_s = calc_continuum_stiff(self.wheel)
-        k_uu = k_s[0, 0]
-        k_ub = k_s[0, 3]
-        k_bb = k_s[3, 3]
-
-        # shortcuts
-        pi = np.pi
-        ns = len(self.wheel.spokes)
-        R = self.wheel.rim.radius
-        EI = self.wheel.rim.young_mod * self.wheel.rim.I22
-        EIw = self.wheel.rim.young_mod * self.wheel.rim.Iw
-        GJ = self.wheel.rim.shear_mod * self.wheel.rim.I11
-
-        rx = np.sqrt(self.wheel.rim.I22 / self.wheel.rim.area)
-        ry = np.sqrt(self.wheel.rim.I33 / self.wheel.rim.area)
-
-        CT = GJ + EIw*n**2/R**2
-
-        # Shear center coordinate
-        if 'y_s' in self.wheel.rim.sec_params:
-            y0 = self.wheel.rim.sec_params['y_c'] -\
-                self.wheel.rim.sec_params['y_s']
-        else:
-            y0 = 0.0
-
-        Nr = np.sum([s.tension*s.n[1] for s in self.wheel.spokes]) / (2*pi)
-
-        if n == 0:
-            U_uu = 2*pi*R*k_uu
-            U_ub = 2*pi*R*k_ub
-            U_bb = 2*pi*EI/R + 2*pi*R*k_bb + 2*pi*Nr*y0
-        else:  # n > 0
-            U_uu = pi*EI*n**4/R**3 + pi*CT*n**2/R**3 + pi*R*k_uu \
-                - pi*Nr*n**2/R - pi*Nr*n**2*ry**2/R**3
-
-            U_ub = -pi*EI*n**2/R**2 - pi*CT*n**2/R**2 + pi*R*k_ub \
-                - pi*Nr*n**2*ry**2/R**2 - pi*Nr*n**2*y0/R
-
-            U_bb = pi*EI/R + pi*CT*n**2/R + pi*R*k_bb\
-                + pi*Nr*y0 - pi*Nr*n**2*(rx**2 + ry**2 + y0**2)/R
-
-        # Solve linear system
-        K = np.zeros((2, 2))
-        K[0, 0] = U_uu
-        K[0, 1] = U_ub
-        K[1, 0] = U_ub
-        K[1, 1] = U_bb
-
-        x = np.linalg.solve(K, np.array([1, 0]))
-
-        # Displacement stiffness
-        Kn_u = 1.0 / x[0]
-
-        # Rotation stiffness
-        if x[1] == 0.0:
-            Kn_p = float('inf')
-        else:
-            Kn_p = 1.0 / x[1]
-
-        return Kn_u
-
-    def calc_lat_stiff(self, smeared_spokes=True, buckling=True, coupling=False):
-        'Calculate lateral stiffness.'
-
-        F_ext = self.F_ext([0.], np.array([[1., 0., 0., 0.]]))
-        d = np.zeros(F_ext.shape)
-
-        if coupling:
-            K = self.K_rim(buckling=buckling) +\
-                self.K_spk(smeared_spokes=smeared_spokes)
-            d = np.linalg.solve(K, F_ext)
-        else:
-            ix_uc = self.get_ix_uncoupled(dim='lateral')
-            F_ext = F_ext[ix_uc]
-            K = self.get_K_uncoupled(dim='lateral',
-                                      smeared_spokes=smeared_spokes,
-                                      buckling=buckling)
-            d_uc = np.linalg.solve(K, F_ext)
-            d[ix_uc] = d_uc
-
-        return 1.0 / self.B_theta(0.).dot(d)[0]
-
-    def calc_rad_stiff(self, smeared_spokes=True, buckling=False, coupling=False):
-        'Calculate radial stiffness.'
-
-        F_ext = self.F_ext([0.], np.array([[0., 1., 0., 0.]]))
-        d = np.zeros(F_ext.shape)
-
-        if coupling:
-            K = self.K_rim(buckling=buckling) +\
-                self.K_spk(smeared_spokes=smeared_spokes)
-            d = np.linalg.solve(K, F_ext)
-        else:
-            ix_uc = self.get_ix_uncoupled(dim='radial')
-            F_ext = F_ext[ix_uc]
-            K = self.get_K_uncoupled(dim='radial',
-                                     smeared_spokes=smeared_spokes,
-                                     buckling=buckling)
-            d_uc = np.linalg.solve(K, F_ext)
-            d[ix_uc] = d_uc
-
-        return 1.0 / self.B_theta(0.).dot(d)[1]
 
     def get_ix_uncoupled(self, dim='lateral'):
         'Get indices for either lateral/torsional or radial/tangential modes.'
@@ -277,7 +169,7 @@ class ModeMatrix:
         return ix
 
     def get_K_uncoupled(self, K=None, dim='lateral',
-                         smeared_spokes=True, buckling=False):
+                         smeared_spokes=True, buckling=True):
         'Calculate stiffness matrix with radial/lateral coupling removed.'
 
         # Calculate stiffness matrix, if not already supplied
@@ -289,37 +181,8 @@ class ModeMatrix:
 
         return K[np.ix_(ix, ix)]
 
-    def buckling_tension(self, smeared_spokes=True, coupling=True):
-        'Estimate buckling tension from condition number of stiffness matrix.'
-
-        def neg_cond(T):
-            self.wheel.apply_tension(T)
-
-            if coupling:
-                K = (self.K_rim(buckling=True) +
-                     self.K_spk(smeared_spokes=smeared_spokes))
-
-            else:
-                K = self.get_K_uncoupled(buckling=True,
-                                          smeared_spokes=smeared_spokes)
-
-            return -np.linalg.cond(K)
-
-        # Find approximate buckling tension from analytical solution
-        Tc_approx = calc_buckling_tension(self.wheel)[0]
-
-        # Maximize the condition number as a function of tension
-        res = minimize(fun=neg_cond, x0=[Tc_approx], method='Nelder-Mead',
-                       options={'maxiter': 50})
-
-        return res.x[0]
-
-
-
-    def __init__(self, wheel, N=10, tension=0.0):
+    def __init__(self, wheel, N=10):
 
         self.wheel = wheel
         self.n_spokes = len(wheel.spokes)
         self.n_modes = N
-
-        self.tension = tension

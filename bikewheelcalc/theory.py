@@ -4,7 +4,8 @@
 
 import numpy as np
 from numpy import pi
-from bikewheelcalc import BicycleWheel
+from scipy.optimize import minimize
+from bikewheelcalc import BicycleWheel, ModeMatrix
 
 
 def calc_buckling_tension(wheel, approx='linear', N=20):
@@ -45,6 +46,34 @@ def calc_buckling_tension(wheel, approx='linear', N=20):
 
         return 2*pi*EI/(ns*R**2) * t_c/(n**2 - R*kT)
 
+
+    def buckling_tension(smeared_spokes=True, coupling=True):
+        'Estimate buckling tension from condition number of stiffness matrix.'
+
+        mm = ModeMatrix(wheel, N=N)
+
+        def neg_cond(T):
+            wheel.apply_tension(T)
+
+            if coupling:
+                K = (mm.K_rim(buckling=True) +
+                     mm.K_spk(smeared_spokes=smeared_spokes))
+
+            else:
+                K = mm.get_K_uncoupled(buckling=True,
+                                       smeared_spokes=smeared_spokes)
+
+            return -np.linalg.cond(K)
+
+        # Find approximate buckling tension from linear analytical solution
+        Tc_approx = np.min([calc_Tc_mode_lin(n) for n in range(2, N+1)])
+
+        # Maximize the condition number as a function of tension
+        res = minimize(fun=neg_cond, x0=[Tc_approx], method='Nelder-Mead',
+                       options={'maxiter': 50})
+
+        return res.x[0]
+
     # shortcuts
     ns = len(wheel.spokes)
     R = wheel.rim.radius
@@ -80,6 +109,82 @@ def calc_buckling_tension(wheel, approx='linear', N=20):
         raise ValueError('Unknown approximation: {:s}'.format(approx))
 
     return T_c, n_c
+
+
+def lat_mode_stiff(wheel, n, smeared_spokes=True, buckling=True, tension=True):
+    'Calculate lateral mode stiffness'
+
+    kbar = wheel.calc_kbar(tension=tension)
+    kuu = kbar[0, 0]
+    kup = kbar[0, 3]
+    kpp = kbar[3, 3]
+
+    # shortcuts
+    ns = len(self.wheel.spokes)
+    R = self.wheel.rim.radius
+    EI = self.wheel.rim.young_mod * self.wheel.rim.I22
+    EIw = self.wheel.rim.young_mod * self.wheel.rim.Iw
+    GJ = self.wheel.rim.shear_mod * self.wheel.rim.I11
+    CT = GJ + EIw*n**2/R**2
+
+    Tb = 0.
+    if buckling:
+        Tb = np.sum([s.tension*s.n[1] for s in self.wheel.spokes]) / (2*pi*R)
+
+    if n == 0:
+        return 2*pi*R*(kuu - R**2*kup**2/(EI + R**2*kpp))
+    elif n == 1:
+        return pi*R*kuu + pi*(((EI/R**3 + CT/R**3)*(kpp/R + 2*R*kup) - kup**2)/
+                              (EI/R**3 + CT/R**3 + kpp/R))
+    elif n > 0 and isinstance(n, int):
+        pass
+    else:
+        raise ValueError('Invalid value for integer mode n: {:s}'
+                         .format(str(n)))
+
+
+def calc_lat_stiff(self, smeared_spokes=True, buckling=True, coupling=False):
+    'Calculate lateral stiffness.'
+
+    F_ext = self.F_ext([0.], np.array([[1., 0., 0., 0.]]))
+    d = np.zeros(F_ext.shape)
+
+    if coupling:
+        K = self.K_rim(buckling=buckling) +\
+            self.K_spk(smeared_spokes=smeared_spokes)
+        d = np.linalg.solve(K, F_ext)
+    else:
+        ix_uc = self.get_ix_uncoupled(dim='lateral')
+        F_ext = F_ext[ix_uc]
+        K = self.get_K_uncoupled(dim='lateral',
+                                 smeared_spokes=smeared_spokes,
+                                 buckling=buckling)
+        d_uc = np.linalg.solve(K, F_ext)
+        d[ix_uc] = d_uc
+
+    return 1.0 / self.B_theta(0.).dot(d)[0]
+
+
+def calc_rad_stiff(self, smeared_spokes=True, buckling=False, coupling=False):
+    'Calculate radial stiffness.'
+
+    F_ext = self.F_ext([0.], np.array([[0., 1., 0., 0.]]))
+    d = np.zeros(F_ext.shape)
+
+    if coupling:
+        K = self.K_rim(buckling=buckling) +\
+            self.K_spk(smeared_spokes=smeared_spokes)
+        d = np.linalg.solve(K, F_ext)
+    else:
+        ix_uc = self.get_ix_uncoupled(dim='radial')
+        F_ext = F_ext[ix_uc]
+        K = self.get_K_uncoupled(dim='radial',
+                                 smeared_spokes=smeared_spokes,
+                                 buckling=buckling)
+        d_uc = np.linalg.solve(K, F_ext)
+        d[ix_uc] = d_uc
+
+    return 1.0 / self.B_theta(0.).dot(d)[1]
 
 
 def calc_Pn_lat(wheel):
