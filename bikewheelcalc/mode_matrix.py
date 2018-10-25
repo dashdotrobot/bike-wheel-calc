@@ -37,10 +37,11 @@ class ModeMatrix:
 
         return B
 
-    def K_rim(self, buckling=False):
+    def K_rim(self, buckling=False, r0=True):
         'Calculate rim strain energy stiffness matrix.'
 
         w = self.wheel
+
         R = w.rim.radius                   # rim radius
         EA = w.rim.young_mod * w.rim.area  # axial stiffness
         EI1 = w.rim.young_mod * w.rim.I33  # radial bending
@@ -48,8 +49,10 @@ class ModeMatrix:
         EIw = w.rim.young_mod * w.rim.Iw   # warping constant
         GJ = w.rim.shear_mod * w.rim.I11   # torsion constant
 
-        ry = np.sqrt(EI1/EA)
-        rx = np.sqrt(EI2/EA)
+        rx, ry = (0., 0.)
+        if y0:
+            ry = np.sqrt(EI1/EA)
+            rx = np.sqrt(EI2/EA)
 
         y0 = 0.  # shear-center offset
         if 'y_s' in wheel.rim.sec_params:
