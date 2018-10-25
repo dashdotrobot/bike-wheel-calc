@@ -3,10 +3,11 @@
 'Tools for theoretical calculations on bicycle wheels.'
 
 import numpy as np
+from numpy import pi
 from bikewheelcalc import BicycleWheel
 
 
-def calc_buckling_tension(wheel, approx=None, N=20):
+def calc_buckling_tension(wheel, approx='linear', N=20):
     'Find minimum critical tension within first N modes.'
 
     def calc_Tc_mode_quad(n):
@@ -52,37 +53,30 @@ def calc_buckling_tension(wheel, approx=None, N=20):
     def calc_Tc_mode_lin(n):
         'Calculate critical tension for nth mode using linear approximation.'
 
-        CT = GJ + EIw*n**2/R**2
-        mu = CT/EI
+        mu = (GJ + EIw*n**2/R**2)/EI
+        l_uu, l_up, l_pp = (R**4/EI) * np.array([k_uu, k_up, k_pp])
 
-        A = 1 + mu*n**2 + k_pp*R**2/EI
-        B = n**4 + mu*n**2
-        C = 2*n**2*(1 + mu) - k_up*R**3/EI
-        D = mu*n**2*(n**2 - 1)**2
+        t_c = (l_uu +
+               (mu*n**2*(n**2-1)**2 + (n**4+mu*n**2)*l_pp
+                + 2*n**2*(mu+1)*l_up - l_up**2)/(1+mu*n**2+l_pp))
 
-        f_T = n**2 / (n**2 - R/ls)
-
-        T_c = 2*pi*EI/(ns*R**2*n**2*A) * f_T *\
-            (A*k_uu*R**4/EI + B*k_pp*R**2/EI + C*k_up*R**3/EI + D)
+        T_c = 2*pi*EI/(ns*R**2) * t_c/(n**2 - R*kT)
 
         return T_c
 
-    kbar_matl = wheel.calc_kbar(tension=False)
-    k_uu = k_s[0, 0]
-    k_up = k_s[0, 3]
-    k_pp = k_s[3, 3]
-
     # shortcuts
-    pi = np.pi
     ns = len(wheel.spokes)
     R = wheel.rim.radius
-    ls = wheel.spokes[0].length
     EI = wheel.rim.young_mod * wheel.rim.I22
     EIw = wheel.rim.young_mod * wheel.rim.Iw
     GJ = wheel.rim.shear_mod * wheel.rim.I11
 
     rx = np.sqrt(wheel.rim.I22 / wheel.rim.area)
     ry = np.sqrt(wheel.rim.I33 / wheel.rim.area)
+
+    kbar = wheel.calc_kbar(tension=False)
+    k_uu, k_up, k_pp = (kbar[0, 0], kbar[0, 3], kbar[3, 3])
+    kT = (2*pi*R/ns)*wheel.calc_kbar_geom()[0, 0]
 
     if approx == 'linear':
         T_cn = [calc_Tc_mode_lin(n) for n in range(2, N+1)]
