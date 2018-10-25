@@ -18,51 +18,32 @@ def calc_buckling_tension(wheel, approx='linear', N=20):
         if 'y_s' in wheel.rim.sec_params:
             y0 = wheel.rim.sec_params['y_s']
         else:
-            y0 = 0.0
+            y0 = 0.
 
-        kT = float(ns) / (2*np.pi*R*ls)
+        A = (R**2*kT - n**2*R)*y0
 
-        A = -2*kT*n**2*ns*pi*rx**2 + (n**4*ns**2*rx**2)/R**2 -\
-            2*kT*n**2*ns*pi*ry**2 + (n**4*ns**2*ry**2)/R**2 +\
-            (n**4*ns**2*rx**2*ry**2)/R**4 -\
-            (n**2*ns**2*y0)/R + 2*kT*ns*pi*R*y0 - (n**2*ns**2*ry**2*y0)/R**3 +\
-            (2*n**4*ns**2*ry**2*y0)/R**3 - 2*kT*n**2*ns*pi*y0**2 +\
-            (n**4*ns**2*ry**2*y0**2)/R**4
+        B = (EI/R*(R*kT - n**2 - n**4*y0/R)
+             +CT*n**2/R*(R*kT - n**2 - y0/R*(2*n**2 - 1))
+             -R*kpp*(n**2 - R*kT) + 2*R*y0*kup*n**2 + R**2*kuu*y0)
 
-        B = -2*k_pp*n**2*ns*pi + 4*EI*kT*pi**2 + 4*CT*kT*n**2*pi**2 -\
-            (2*EI*n**2*ns*pi)/R**2 - (2*CT*n**4*ns*pi)/R**2 +\
-            4*kT*k_pp*pi**2*R**2 - 2*k_uu*n**2*ns*pi*rx**2 -\
-            (2*CT*n**4*ns*pi*rx**2)/R**4 - (2*EI*n**6*ns*pi*rx**2)/R**4 -\
-            2*k_uu*n**2*ns*pi*ry**2 - (2*EI*n**2*ns*pi*ry**2)/R**4 +\
-            (4*EI*n**4*ns*pi*ry**2)/R**4 - (2*EI*n**6*ns*pi*ry**2)/R**4 -\
-            (2*k_pp*n**2*ns*pi*ry**2)/R**2 - (4*k_up*n**2*ns*pi*ry**2)/R +\
-            4*k_up*n**2*ns*pi*y0 + (2*CT*n**2*ns*pi*y0)/R**3 -\
-            (2*EI*n**4*ns*pi*y0)/R**3 - (4*CT*n**4*ns*pi*y0)/R**3 +\
-            2*k_uu*ns*pi*R*y0 - 2*k_uu*n**2*ns*pi*y0**2 -\
-            (2*CT*n**4*ns*pi*y0**2)/R**4 - (2*EI*n**6*ns*pi*y0**2)/R**4
-
-        C = -(-((2*EI*n**2*pi)/R**2) - (2*CT*n**2*pi)/R**2 + 2*k_up*pi*R)**2 +\
-            ((2*CT*n**2*pi)/R**3 + (2*EI*n**4*pi)/R**3 + 2*k_uu*pi*R) *\
-            ((2*EI*pi)/R + (2*CT*n**2*pi)/R + 2*k_pp*pi*R)
+        C = (EI*CT*n**2/R**4*(n**2-1)**2
+             +EI*(kuu + 2*kup/R*n**2 + kpp/R**2*n**4)
+             +CT*n**2*(kuu + 2*kup/R + kpp/R**2))
 
         # Solve for the smaller root
-        T_c = (-B - np.sqrt(B**2 - 4*A*C))/(2*A)
-
-        return T_c
+        return (2*pi*R/ns) * (-B - np.sqrt(B**2 - 4*A*C))/(2*A)
 
     def calc_Tc_mode_lin(n):
         'Calculate critical tension for nth mode using linear approximation.'
 
         mu = (GJ + EIw*n**2/R**2)/EI
-        l_uu, l_up, l_pp = (R**4/EI) * np.array([k_uu, k_up, k_pp])
+        luu, lup, lpp = (R**4/EI) * np.array([kuu, kup, kpp])
 
-        t_c = (l_uu +
-               (mu*n**2*(n**2-1)**2 + (n**4+mu*n**2)*l_pp
-                + 2*n**2*(mu+1)*l_up - l_up**2)/(1+mu*n**2+l_pp))
+        t_c = (luu +
+               (mu*n**2*(n**2-1)**2 + (n**4+mu*n**2)*lpp
+                + 2*n**2*(mu+1)*lup - lup**2)/(1+mu*n**2+lpp))
 
-        T_c = 2*pi*EI/(ns*R**2) * t_c/(n**2 - R*kT)
-
-        return T_c
+        return 2*pi*EI/(ns*R**2) * t_c/(n**2 - R*kT)
 
     # shortcuts
     ns = len(wheel.spokes)
@@ -75,7 +56,7 @@ def calc_buckling_tension(wheel, approx='linear', N=20):
     ry = np.sqrt(wheel.rim.I33 / wheel.rim.area)
 
     kbar = wheel.calc_kbar(tension=False)
-    k_uu, k_up, k_pp = (kbar[0, 0], kbar[0, 3], kbar[3, 3])
+    kuu, kup, kpp = (kbar[0, 0], kbar[0, 3], kbar[3, 3])
     kT = (2*pi*R/ns)*wheel.calc_kbar_geom()[0, 0]
 
     if approx == 'linear':
