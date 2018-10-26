@@ -101,7 +101,7 @@ class ModeMatrix:
         return K_rim_matl
 
     def K_rim_geom(self, r0=True):
-        'Tension-dependent portion of K_rim, such that K_rim = K_rim_matl + -T_avg*K_rim_geom'
+        'Tension-dependent portion of K_rim, such that K_rim = K_rim_matl - T_avg*K_rim_geom'
 
         w = self.wheel
 
@@ -113,52 +113,68 @@ class ModeMatrix:
 
         r02 = 0.
         if r0:
-            r02 = EI1/EA + EI2/EA + y0**2
+            r02 = w.rim.I33/w.rim.area + w.rim.I22/w.rim.area + y0**2
 
-        # Average net radial tension per unit length (divided by average tension)
-        Tbar = len(w.spokes)/(2*pi*R)
-
-        K_rim = np.zeros((4 + self.n_modes*8, 4 + self.n_modes*8))
+        K_rim_geom = np.zeros((4 + self.n_modes*8, 4 + self.n_modes*8))
 
         # zero mode
-        K_rim_geom[3, 3] = 2*pi*EI2/R + 2*pi*R*y0*Tbar
+        K_rim_geom[3, 3] = -2*pi*R*y0
 
         # higher modes
         for n in range(1, self.n_modes + 1):
             i0 = 4 + (n-1)*8
 
             # k_uu
-            K_rim_geom[i0+0, i0+0] = Tbar*pi*n**2*(1. + r02/R**2)
-            K_rim_geom[i0+1, i0+1] = K_rim[i0+0, i0+0]
+            K_rim_geom[i0+0, i0+0] = pi*n**2*(1. + r02/R**2)
+            K_rim_geom[i0+1, i0+1] = K_rim_geom[i0+0, i0+0]
 
             # k_up
-            K_rim_geom[i0+0, i0+6] = Tbar*pi*n**2*(y0 - r02/R*n**2)
-            K_rim_geom[i0+6, i0+0] = K_rim[i0+0, i0+6]
-            K_rim_geom[i0+1, i0+7] = K_rim[i0+0, i0+6]
-            K_rim_geom[i0+7, i0+1] = K_rim[i0+0, i0+6]
+            K_rim_geom[i0+0, i0+6] = pi*n**2*(y0 - r02/R*n**2)
+            K_rim_geom[i0+6, i0+0] = K_rim_geom[i0+0, i0+6]
+            K_rim_geom[i0+1, i0+7] = K_rim_geom[i0+0, i0+6]
+            K_rim_geom[i0+7, i0+1] = K_rim_geom[i0+0, i0+6]
 
             # k_pp
-            K_rim_geom[i0+6, i0+6] = -Tbar*pi*(R*y0 - r02*n**2)
-            K_rim_geom[i0+7, i0+7] = K_rim[i0+6, i0+6]
+            K_rim_geom[i0+6, i0+6] = -pi*(R*y0 - r02*n**2)
+            K_rim_geom[i0+7, i0+7] = K_rim_geom[i0+6, i0+6]
 
-        return K_rim
-
-    def K_spk_matl(self, smeared_spokes=True):
-        pass
+        return len(w.spokes)/(2*pi*R) * K_rim_geom
 
     def K_spk_geom(self, smeared_spokes=True):
-        pass
+        'Tension-dependent portion of K_spk, such that K_spk = K_spk_matl + T_avg*K_spk_geom'
+
+        K_spk = np.zeros((4 + self.n_modes*8, 4 + self.n_modes*8))
+
+        if smeared_spokes:  # Smith-Pippard approximation
+
+            k_avg = 2*pi*self.wheel.rim.radius * self.wheel.calc_kbar_geom()
+
+            K_spk[0:4, 0:4] = k_avg  # n = 0
+            
+            for n in range(1, self.n_modes+1):  # n >= 1
+                K_spk[(4 + 8*(n-1)):(4 + 8*n):2,
+                      (4 + 8*(n-1)):(4 + 8*n):2] = k_avg/2
+                K_spk[(5 + 8*(n-1)):(5 + 8*n):2,
+                      (5 + 8*(n-1)):(5 + 8*n):2] = k_avg/2
+
+        else:  # Fully-discrete spokes
+
+            for s in self.wheel.spokes:
+                B = self.B_theta(s.rim_pt[1])
+                K_spk = K_spk + B.T.dot(s.calc_k_geom().dot(B))
+
+        return K_spk
 
     def K_rim(self, tension=True, r0=True):
         'Calculate rim strain energy stiffness matrix.'
 
         K_rim = self.K_rim_matl(r0=r0)
         if tension:
-            T_avg = np.sum([s.tension*s.n[1] for s in self.wheel.spokes])
+            T_avg = np.sum([s.tension*s.n[1]/len(self.wheel.spokes)
+                            for s in self.wheel.spokes])
             K_rim = K_rim - T_avg*self.K_rim_geom(r0=r0)
 
         return K_rim
-
 
     def K_spk(self, smeared_spokes=True, tension=True):
         'Calculate spoke mode stiffness matrix.'
@@ -167,21 +183,15 @@ class ModeMatrix:
 
         if smeared_spokes:  # Smith-Pippard approximation
 
-            k_avg = np.zeros(4)
-            for s in self.wheel.spokes:
-                k_avg = k_avg + s.calc_k(tension=tension)
+            k_avg = 2*pi*self.wheel.rim.radius * self.wheel.calc_kbar(tension=tension)
 
-            # n = 0
-            K_spk[0:4, 0:4] = k_avg
-
-            # n >= 1
-            for n in range(1, self.n_modes+1):
+            K_spk[0:4, 0:4] = k_avg  # n = 0
+            
+            for n in range(1, self.n_modes+1):  # n >= 1
                 K_spk[(4 + 8*(n-1)):(4 + 8*n):2,
                       (4 + 8*(n-1)):(4 + 8*n):2] = k_avg/2
                 K_spk[(5 + 8*(n-1)):(5 + 8*n):2,
                       (5 + 8*(n-1)):(5 + 8*n):2] = k_avg/2
-
-            return K_spk
 
         else:  # Fully-discrete spokes
 
@@ -189,7 +199,7 @@ class ModeMatrix:
                 B = self.B_theta(s.rim_pt[1])
                 K_spk = K_spk + B.T.dot(s.calc_k(tension=tension).dot(B))
 
-            return K_spk
+        return K_spk
 
     def F_ext(self, f_theta, f):
         'Calculate external force vector.'
