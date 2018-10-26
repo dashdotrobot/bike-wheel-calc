@@ -159,9 +159,14 @@ class ModeMatrix:
 
         else:  # Fully-discrete spokes
 
+            # Get scaling factor for tension on each side of the wheel
+            s_0 = self.wheel.spokes[0]
+            s_1 = self.wheel.spokes[1]
+            T_d = np.abs(s_0.n[0]*s_1.n[1]) + np.abs(s_1.n[0]*s_0.n[1])
+
             for s in self.wheel.spokes:
                 B = self.B_theta(s.rim_pt[1])
-                K_spk = K_spk + B.T.dot(s.calc_k_geom().dot(B))
+                K_spk = K_spk + 2*np.abs(s.n[0])/T_d * B.T.dot(s.calc_k_geom().dot(B))
 
         return K_spk
 
