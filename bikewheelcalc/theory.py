@@ -45,34 +45,6 @@ def calc_buckling_tension(wheel, approx='linear', N=20):
 
         return 2*pi*EI/(ns*R**2) * t_c/(n**2 - R*kT)
 
-
-    def buckling_tension(smeared_spokes=True, coupling=True):
-        'Estimate buckling tension from condition number of stiffness matrix.'
-
-        mm = ModeMatrix(wheel, N=N)
-
-        def neg_cond(T):
-            wheel.apply_tension(T)
-
-            if coupling:
-                K = (mm.K_rim(buckling=True) +
-                     mm.K_spk(smeared_spokes=smeared_spokes))
-
-            else:
-                K = mm.get_K_uncoupled(buckling=True,
-                                       smeared_spokes=smeared_spokes)
-
-            return -np.linalg.cond(K)
-
-        # Find approximate buckling tension from linear analytical solution
-        Tc_approx = np.min([calc_Tc_mode_lin(n) for n in range(2, N+1)])
-
-        # Maximize the condition number as a function of tension
-        res = minimize(fun=neg_cond, x0=[Tc_approx], method='Nelder-Mead',
-                       options={'maxiter': 50})
-
-        return res.x[0]
-
     # shortcuts
     ns = len(wheel.spokes)
     R = wheel.rim.radius
@@ -94,8 +66,9 @@ def calc_buckling_tension(wheel, approx='linear', N=20):
         T_c = min(T_cn)
         n_c = T_cn.index(T_c) + 2
 
-    elif approx == 'coupled':
-        pass
+    elif approx == 'modematrix':
+        T_c = calc_Tc_modematrix(smeared_spokes=True, coupling=False)
+        n_c = None
 
     elif approx == 'small_mu':
         T_c = 11.875 * GJ/(ns*R**2) * np.power(k_uu*R**4/GJ, 2.0/3.0)
@@ -105,6 +78,33 @@ def calc_buckling_tension(wheel, approx='linear', N=20):
         raise ValueError('Unknown approximation: {:s}'.format(approx))
 
     return T_c, n_c
+
+
+def calc_buckling_tension_modematrix(smeared_spokes=True, coupling=True, r0=True):
+    'Estimate buckling tension from condition number of stiffness matrix.'
+
+    mm = ModeMatrix(wheel, N=N)
+
+    def neg_cond(T):
+        wheel.apply_tension(T)
+
+        K = (mm.K_rim(buckling=True, r0=r0) +
+             mm.K_spk(smeared_spokes=smeared_spokes))
+
+        if not coupling:
+            K = mm.get_K_uncoupled(buckling=True,
+                                   smeared_spokes=smeared_spokes)
+
+        return -np.linalg.cond(K)
+
+    # Find approximate buckling tension from linear analytical solution
+    Tc_approx = calc_buckling_tension(wheel, approx='linear')
+
+    # Maximize the condition number as a function of tension
+    res = minimize(fun=neg_cond, x0=[Tc_approx], method='Nelder-Mead',
+                   options={'maxiter': 50})
+
+    return res.x[0]
 
 
 def lat_mode_stiff(wheel, n, smeared_spokes=True, buckling=True, tension=True):

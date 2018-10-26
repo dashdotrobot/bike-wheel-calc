@@ -41,3 +41,11 @@ def test_Tc_lin_quad(std_ncross):
     Tc_quad = calc_buckling_tension(w, approx='quadratic', N=20)
 
     assert np.abs((Tc_lin[0] - Tc_quad[0]) / Tc_quad[0]) < 0.001
+
+# def test_Tc_MM_uncoupled(std_ncross):
+#     'Test '
+#     w = std_ncross(0)
+
+#     # Tc_mm = calc_buckling_tension_modematrix(smeared_spokes=True, )
+
+#     assert False
