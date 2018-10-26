@@ -37,8 +37,8 @@ class ModeMatrix:
 
         return B
 
-    def K_rim(self, buckling=False, r0=True):
-        'Calculate rim strain energy stiffness matrix.'
+    def K_rim_matl(self, r0=True):
+        'Elastic portion of K_rim.'
 
         w = self.wheel
 
@@ -49,67 +49,116 @@ class ModeMatrix:
         EIw = w.rim.young_mod * w.rim.Iw   # warping constant
         GJ = w.rim.shear_mod * w.rim.I11   # torsion constant
 
-        rx, ry = (0., 0.)
-        if y0:
-            ry = np.sqrt(EI1/EA)
-            rx = np.sqrt(EI2/EA)
-
         y0 = 0.  # shear-center offset
-        if 'y_s' in wheel.rim.sec_params:
-            y0 = wheel.rim.sec_params['y_s']
+        if 'y_s' in w.rim.sec_params:
+            y0 = w.rim.sec_params['y_s']
 
-        r02 = rx**2 + ry**2 + y0**2
+        r02 = 0.
+        if r0:
+            r02 = EI1/EA + EI2/EA + y0**2
 
-        # Average net radial tension per unit length
-        Tbar = 0.
-        if buckling:
-            Tbar = np.sum([s.tension*s.n[1] for s in w.spokes])/(2*pi*R)
-
-        K_rim = np.zeros((4 + self.n_modes*8, 4 + self.n_modes*8))
+        K_rim_matl = np.zeros((4 + self.n_modes*8, 4 + self.n_modes*8))
 
         # zero mode
-        K_rim[1, 1] = 2*pi*EA/R
-        K_rim[3, 3] = 2*pi*EI2/R + 2*pi*R*y0*Tbar
+        K_rim_matl[1, 1] = 2*pi*EA/R
+        K_rim_matl[3, 3] = 2*pi*EI2/R
 
         # higher modes
         for n in range(1, self.n_modes + 1):
             i0 = 4 + (n-1)*8
 
             # k_vv
-            K_rim[i0+2, i0+2] = EI1*pi/R**3*n**4 + EA*pi/R*(1 + y0/R*n**2)**2
-            K_rim[i0+3, i0+3] = K_rim[i0+2, i0+2]
+            K_rim_matl[i0+2, i0+2] = EI1*pi/R**3*n**4 + EA*pi/R*(1 + y0/R*n**2)**2
+            K_rim_matl[i0+3, i0+3] = K_rim_matl[i0+2, i0+2]
 
             # k_ww
-            K_rim[i0+4, i0+4] = EI1*pi/R**3*n**2 + EA*pi/R*(1 + y0/R)**2
-            K_rim[i0+5, i0+5] = K_rim[i0+4, i0+4]
+            K_rim_matl[i0+4, i0+4] = EI1*pi/R**3*n**2 + EA*pi/R*(1 + y0/R)**2
+            K_rim_matl[i0+5, i0+5] = K_rim_matl[i0+4, i0+4]
 
             # k_vw
-            K_rim[i0+2, i0+5] = -EI1*pi/R**3*n**3 -\
+            K_rim_matl[i0+2, i0+5] = -EI1*pi/R**3*n**3 -\
                 EA*pi*n/R*(1 + y0/R*(1 + n**2) + y0**2/R**2*n**2)
-            K_rim[i0+5, i0+2] = K_rim[i0+2, i0+5]
-            K_rim[i0+3, i0+4] = -K_rim[i0+2, i0+5]
-            K_rim[i0+4, i0+3] = -K_rim[i0+2, i0+5]
+            K_rim_matl[i0+5, i0+2] = K_rim_matl[i0+2, i0+5]
+            K_rim_matl[i0+3, i0+4] = -K_rim_matl[i0+2, i0+5]
+            K_rim_matl[i0+4, i0+3] = -K_rim_matl[i0+2, i0+5]
 
             # k_uu
-            K_rim[i0+0, i0+0] = (EI2*pi/R**3*n**4 + EIw*pi/R**5*n**4 +
-                                 GJ*pi/R**3*n**2 -
-                                 Tbar*pi*n**2*(1. + r02/R**2))
-            K_rim[i0+1, i0+1] = K_rim[i0+0, i0+0]
+            K_rim_matl[i0+0, i0+0] = (EI2*pi/R**3*n**4 + EIw*pi/R**5*n**4 +
+                                 GJ*pi/R**3*n**2)
+            K_rim_matl[i0+1, i0+1] = K_rim_matl[i0+0, i0+0]
 
             # k_up
-            K_rim[i0+0, i0+6] = -(EI2*pi/R**2*n**2 + EIw*pi/R**4*n**4 +
-                                  GJ*pi/R**2*n**2 +
-                                  Tbar*pi*n**2*(y0 - r02/R*n**2))
-            K_rim[i0+6, i0+0] = K_rim[i0+0, i0+6]
-            K_rim[i0+1, i0+7] = K_rim[i0+0, i0+6]
-            K_rim[i0+7, i0+1] = K_rim[i0+0, i0+6]
+            K_rim_matl[i0+0, i0+6] = -(EI2*pi/R**2*n**2 + EIw*pi/R**4*n**4 +
+                                  GJ*pi/R**2*n**2)
+            K_rim_matl[i0+6, i0+0] = K_rim_matl[i0+0, i0+6]
+            K_rim_matl[i0+1, i0+7] = K_rim_matl[i0+0, i0+6]
+            K_rim_matl[i0+7, i0+1] = K_rim_matl[i0+0, i0+6]
 
             # k_pp
-            K_rim[i0+6, i0+6] = (EI2*pi/R + EIw*pi/R**3*n**4 + GJ*pi/R*n**2 +
-                                 Tbar*pi*(R*y0 - r02*n**2))
-            K_rim[i0+7, i0+7] = K_rim[i0+6, i0+6]
+            K_rim_matl[i0+6, i0+6] = (EI2*pi/R + EIw*pi/R**3*n**4 + GJ*pi/R*n**2)
+            K_rim_matl[i0+7, i0+7] = K_rim_matl[i0+6, i0+6]
+
+        return K_rim_matl
+
+    def K_rim_geom(self, r0=True):
+        'Tension-dependent portion of K_rim, such that K_rim = K_rim_matl + -T_avg*K_rim_geom'
+
+        w = self.wheel
+
+        R = w.rim.radius
+
+        y0 = 0.  # shear-center offset
+        if 'y_s' in w.rim.sec_params:
+            y0 = w.rim.sec_params['y_s']
+
+        r02 = 0.
+        if r0:
+            r02 = EI1/EA + EI2/EA + y0**2
+
+        # Average net radial tension per unit length (divided by average tension)
+        Tbar = len(w.spokes)/(2*pi*R)
+
+        K_rim = np.zeros((4 + self.n_modes*8, 4 + self.n_modes*8))
+
+        # zero mode
+        K_rim_geom[3, 3] = 2*pi*EI2/R + 2*pi*R*y0*Tbar
+
+        # higher modes
+        for n in range(1, self.n_modes + 1):
+            i0 = 4 + (n-1)*8
+
+            # k_uu
+            K_rim_geom[i0+0, i0+0] = Tbar*pi*n**2*(1. + r02/R**2)
+            K_rim_geom[i0+1, i0+1] = K_rim[i0+0, i0+0]
+
+            # k_up
+            K_rim_geom[i0+0, i0+6] = Tbar*pi*n**2*(y0 - r02/R*n**2)
+            K_rim_geom[i0+6, i0+0] = K_rim[i0+0, i0+6]
+            K_rim_geom[i0+1, i0+7] = K_rim[i0+0, i0+6]
+            K_rim_geom[i0+7, i0+1] = K_rim[i0+0, i0+6]
+
+            # k_pp
+            K_rim_geom[i0+6, i0+6] = -Tbar*pi*(R*y0 - r02*n**2)
+            K_rim_geom[i0+7, i0+7] = K_rim[i0+6, i0+6]
 
         return K_rim
+
+    def K_spk_matl(self, smeared_spokes=True):
+        pass
+
+    def K_spk_geom(self, smeared_spokes=True):
+        pass
+
+    def K_rim(self, tension=True, r0=True):
+        'Calculate rim strain energy stiffness matrix.'
+
+        K_rim = self.K_rim_matl(r0=r0)
+        if tension:
+            T_avg = np.sum([s.tension*s.n[1] for s in self.wheel.spokes])
+            K_rim = K_rim - T_avg*self.K_rim_geom(r0=r0)
+
+        return K_rim
+
 
     def K_spk(self, smeared_spokes=True, tension=True):
         'Calculate spoke mode stiffness matrix.'
@@ -171,14 +220,8 @@ class ModeMatrix:
 
         return ix
 
-    def get_K_uncoupled(self, K=None, dim='lateral',
-                         smeared_spokes=True, buckling=True):
+    def get_K_uncoupled(self, K, dim='lateral'):
         'Calculate stiffness matrix with radial/lateral coupling removed.'
-
-        # Calculate stiffness matrix, if not already supplied
-        if K is None:
-            K = (self.K_spk(smeared_spokes=smeared_spokes) +
-                 self.K_rim(buckling=buckling))
 
         ix = self.get_ix_uncoupled(dim=dim)
 
