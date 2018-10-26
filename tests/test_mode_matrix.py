@@ -1,4 +1,5 @@
 import pytest
+import sys
 from bikewheelcalc import *
 
 
@@ -9,7 +10,7 @@ from bikewheelcalc import *
 def test_K_matl_geom(std_ncross):
     'Check that _geom and _matl stiffness matrices are consistent'
 
-    w = std_ncross(0)
+    w = std_ncross(3)
     w.rim.sec_params['y_s'] = 0.001
     w.apply_tension(100.)
 
@@ -25,15 +26,35 @@ def test_K_matl_geom(std_ncross):
 
     assert np.allclose(K1, K2)
 
-def test_K_wheel(std_ncross):
-    'Check properties of stiffness matrix'
+def test_K_radial_singular(std_ncross):
+    'Radial-spoked wheel at T=0 should have a singular matrix'
 
+    w = std_ncross(0)
+    w.rim.sec_params['y_s'] = 0.001
+    w.apply_tension(0.)
+
+    mm = ModeMatrix(w, N=20)
+
+    K = (mm.K_rim(tension=False, r0=True) +
+         mm.K_spk(tension=False, smeared_spokes=True))
+
+    assert np.linalg.cond(K) > 1./sys.float_info.epsilon
+
+
+def test_K_pos_def(std_ncross):
+
+    # Tangent-spoked wheel should have a positive-definite stiffness matrix
     w = std_ncross(3)
     w.rim.sec_params['y_s'] = 0.001
     w.apply_tension(0.)
 
     mm = ModeMatrix(w, N=20)
 
-    # K = mm.K_rim(tension=False, r0=True) + mm.K_
+    K = (mm.K_rim(tension=False, r0=True) +
+         mm.K_spk(tension=False, smeared_spokes=True))
 
-    assert True
+    # Symmetric
+    assert np.allclose(K, K.transpose())
+
+    # Positive eigenvalues
+    # assert np.all(np.linalg.eigvals(K) > 0.)
