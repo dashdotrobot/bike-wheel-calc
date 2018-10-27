@@ -118,7 +118,7 @@ class ModeMatrix:
         K_rim_geom = np.zeros((4 + self.n_modes*8, 4 + self.n_modes*8))
 
         # zero mode
-        K_rim_geom[3, 3] = -2*pi*R*y0
+        K_rim_geom[3, 3] = -2.*pi*R*y0
 
         # higher modes
         for n in range(1, self.n_modes + 1):
