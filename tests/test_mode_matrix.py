@@ -41,13 +41,12 @@ def test_K_radial_singular(std_ncross):
 
     assert np.linalg.cond(K) > 1./sys.float_info.epsilon
 
-
 def test_K_pos_def(std_ncross):
     'Check properties of stiffness matrix'
 
     # Tangent-spoked wheel should have a positive-definite stiffness matrix
     w = std_ncross(3)
-    w.rim.sec_params['y_s'] = 0.001
+    w.rim.sec_params['y_s'] = 0.0
     w.apply_tension(0.)
 
     mm = ModeMatrix(w, N=36)
@@ -67,12 +66,6 @@ def test_K_lat(std_ncross):
     w = std_ncross(0)
     w.rim.sec_params['y_s'] = 0.
     w.apply_tension(100.)
-
-    def get_Kn_from_K(KK, n):
-        Ksub = KK[2+4*(n-1):2+4*(n-1)+4, 2+4*(n-1):2+4*(n-1)+4]
-        k = np.linalg.solve(Ksub, np.array([1., 0., 0., 0.]))
-
-        return 1./k[0]
 
 
     # Analytical solution

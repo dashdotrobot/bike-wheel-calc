@@ -139,26 +139,25 @@ def lat_mode_stiff(wheel, n, smeared_spokes=True, buckling=True, tension=True):
                          .format(str(n)))
 
 
-def calc_lat_stiff(self, smeared_spokes=True, buckling=True, coupling=False):
+def calc_lat_stiff(wheel, N=20, smeared_spokes=True, tension=True, buckling=True, coupling=False, r0=False):
     'Calculate lateral stiffness.'
 
-    F_ext = self.F_ext([0.], np.array([[1., 0., 0., 0.]]))
+    mm = ModeMatrix(wheel, N=N)
+
+    F_ext = mm.F_ext([0.], np.array([[1., 0., 0., 0.]]))
     d = np.zeros(F_ext.shape)
 
+    K = (mm.K_rim(tension=buckling, r0=r0) +
+         mm.K_spk(tension=tension, smeared_spokes=smeared_spokes))
+
     if coupling:
-        K = self.K_rim(buckling=buckling) +\
-            self.K_spk(smeared_spokes=smeared_spokes)
         d = np.linalg.solve(K, F_ext)
     else:
-        ix_uc = self.get_ix_uncoupled(dim='lateral')
-        F_ext = F_ext[ix_uc]
-        K = self.get_K_uncoupled(dim='lateral',
-                                 smeared_spokes=smeared_spokes,
-                                 buckling=buckling)
-        d_uc = np.linalg.solve(K, F_ext)
-        d[ix_uc] = d_uc
+        ix_uc = mm.get_ix_uncoupled(dim='lateral')
+        K = mm.get_K_uncoupled(K=K, dim='lateral')
+        d[ix_uc] = np.linalg.solve(K, F_ext[ix_uc])
 
-    return 1.0 / self.B_theta(0.).dot(d)[0]
+    return 1. / mm.B_theta(0.).dot(d)[0]
 
 
 def calc_rad_stiff(self, smeared_spokes=True, buckling=False, coupling=False):

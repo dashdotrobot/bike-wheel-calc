@@ -49,3 +49,35 @@ def test_Tc_lin_quad(std_ncross):
 #     # Tc_mm = calc_buckling_tension_modematrix(smeared_spokes=True, )
 
 #     assert False
+
+def test_Klat_uncoupled(std_ncross):
+    'Check that calc_lat_stiff() and Eqn. (2.71) give same result'
+
+    w = std_ncross(0)
+    w.rim.sec_params['y_s'] = 0.
+    w.apply_tension(100.)
+
+    # Analytical solution
+    R = w.rim.radius
+    EI = w.rim.young_mod*w.rim.I22
+    GJ = w.rim.shear_mod*w.rim.I11
+
+    kuu = w.calc_kbar(tension=True)[0, 0]
+    Tb = np.sum([s.tension*s.n[1] for s in w.spokes]) / (2.*np.pi*R)
+
+    Kb = lambda n: np.pi*EI     /R**3*(n**2 - 1)**2
+    Kt = lambda n: np.pi*GJ*n**2/R**3*(n**2-1)**2
+
+    K0 = 2*np.pi*R*kuu
+    K1 = np.pi*R*kuu - np.pi*Tb
+    Kn = lambda n: np.pi*R*kuu + Kb(n)*Kt(n)/(Kb(n)+Kt(n)) - np.pi*n**2*Tb
+
+    K_lat_mode = 1./(1./K0 + 1./K1 + np.sum([1./Kn(n) for n in range(2, 11)]))
+
+
+    # Theory
+    K_lat_mm = calc_lat_stiff(wheel=w, N=10,
+                              smeared_spokes=True, tension=True,
+                              buckling=True, coupling=False)
+
+    assert np.allclose(K_lat_mode, K_lat_mm)
