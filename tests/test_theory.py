@@ -66,7 +66,6 @@ def test_Klat_uncoupled(std_ncross):
 
     K_lat_mode = 1./(1./K0 + 1./K1 + np.sum([1./Kn(n) for n in range(2, 11)]))
 
-
     # Theory
     K_lat_mm = calc_lat_stiff(wheel=w, N=10,
                               smeared_spokes=True, tension=True,

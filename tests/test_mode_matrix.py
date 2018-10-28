@@ -52,13 +52,13 @@ def test_K_pos_def(std_ncross):
     mm = ModeMatrix(w, N=36)
 
     K = (mm.K_rim(tension=False, r0=True) +
-         mm.K_spk(tension=False, smeared_spokes=True))
+         mm.K_spk(tension=False, smeared_spokes=False))
 
     # Symmetric
     assert np.allclose(K, K.transpose())
 
     # Positive eigenvalues
-    assert np.all(np.linalg.eigvals(K) > 0.)
+    assert np.all(np.linalg.eigvals(K) > -1e-8)
 
 def test_K_lat(std_ncross):
     'Check that ModeMatrix and Eqn. (2.71) give same result'

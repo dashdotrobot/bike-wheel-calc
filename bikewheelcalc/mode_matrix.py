@@ -72,7 +72,7 @@ class ModeMatrix:
             K_rim_matl[i0+3, i0+3] = K_rim_matl[i0+2, i0+2]
 
             # k_ww
-            K_rim_matl[i0+4, i0+4] = EI1*pi/R**3*n**2 + EA*pi/R*(1 + y0/R)**2
+            K_rim_matl[i0+4, i0+4] = EI1*pi/R**3*n**2 + EA*pi/R*n**2*(1 + y0/R)**2
             K_rim_matl[i0+5, i0+5] = K_rim_matl[i0+4, i0+4]
 
             # k_vw
@@ -84,7 +84,7 @@ class ModeMatrix:
 
             # k_uu
             K_rim_matl[i0+0, i0+0] = (EI2*pi/R**3*n**4 + EIw*pi/R**5*n**4 +
-                                 GJ*pi/R**3*n**2)
+                                      GJ*pi/R**3*n**2)
             K_rim_matl[i0+1, i0+1] = K_rim_matl[i0+0, i0+0]
 
             # k_up
