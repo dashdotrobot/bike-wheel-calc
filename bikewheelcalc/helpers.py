@@ -1,3 +1,5 @@
+'Utility functions for bikewheelcalc'
+
 import numpy as np
 from scipy import interpolate
 

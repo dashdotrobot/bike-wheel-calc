@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 'Tools for theoretical calculations on bicycle wheels.'
 
 import numpy as np

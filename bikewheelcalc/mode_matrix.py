@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-
-"""Rayleigh-Ritz solution to fully-coupled uvw-phi equations."""
+'Rayleigh-Ritz solution to fully-coupled uvw-phi equations.'
 
 import numpy as np
 from numpy import pi

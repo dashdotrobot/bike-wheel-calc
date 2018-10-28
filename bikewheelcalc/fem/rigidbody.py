@@ -1,3 +1,5 @@
+'RigidBody Class'
+
 import numpy as np
 
 

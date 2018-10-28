@@ -1,3 +1,5 @@
+'BicycleWheelFEM Class'
+
 import numpy as np
 from .femsolution import FEMSolution
 from .rigidbody import *

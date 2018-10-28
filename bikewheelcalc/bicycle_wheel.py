@@ -1,3 +1,5 @@
+'Core classes BicycleWheel, Hub, Rim, and Spoke'
+
 import numpy as np
 import matplotlib.pyplot as plt
 from .helpers import pol2rect
