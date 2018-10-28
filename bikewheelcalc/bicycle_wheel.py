@@ -94,29 +94,48 @@ class Rim:
 
 
 class Hub:
-    """Hub definition.
+    """Hub consisting of two parallel, circular flanges.
 
     Args:
-        diam1: diameter of drive-side flange.
-        diam2: diameter of left-side flange.
-        width1: distance from rim plane to drive-side flange midplane.
-        width2: distance from rim plane to left-side flange midplane.
+        diameter_left: diameter of the left-side hub flange.
+        diameter_right: diameter of the drive-side hub flange.
+        width_left: distance from rim plane to left-side flange.
+        width_right: distance from rim plane to drive-side flange.
+
+    Usage:
+        Symmetric:           Hub(diameter=0.05, width=0.05)
+        Asymmetric, specify: Hub(diameter=0.05, width_left=0.03, width_right=0.02)
+        Asymmetric, offset:  Hub(diameter_left=0.04, diameter_right=0.06, width=0.05, offset=0.01)
     """
 
-    def __init__(self, diam1=None, diam2=None, width1=None, width2=None):
-        self.width1 = width1
-        self.diam1 = diam1
-        self.width2 = width2
-        self.diam2 = diam2
+    def __init__(self, diameter=None, diameter_left=None, diameter_right=None,
+                 width=None, width_left=None, width_right=None, offset=None):
 
-        if diam2 is None:
-            self.diam2 = diam1
+        # Set flange diameters
+        self.diameter_left = diameter
+        self.diameter_right = diameter
 
-        if width2 is None:
-            self.width2 = width1
+        if isinstance(diameter_left, float):
+            self.diameter_left = diameter_left
+        if isinstance(diameter_right, float):
+            self.diameter_right = diameter_right
 
-        self.radius1 = self.diam1 / 2
-        self.radius2 = self.diam2 / 2
+        # Set flange widths
+        if isinstance(width, float):
+            if offset is None:
+                offset = 0.
+
+            self.width_left = width/2 + offset
+            self.width_right = width/2 - offset
+
+            if (width_left is not None) or (width_right is not None):
+                raise ValueError('Cannot specify width_left or width_right when using the offset parameter.')
+
+        elif isinstance(width_left, float) and isinstance(width_right, float):
+            self.width_left = width_left
+            self.width_right = width_right
+        else:
+            raise ValueError('width_left and width_right must both be defined if not using the width parameter.')
 
 
 class Spoke:
@@ -131,18 +150,50 @@ class Spoke:
         """Calculate matrix relating force and moment at rim due to the
         spoke under a rim displacement (u,v,w) and rotation phi"""
 
-        n = self.n                      # spoke vector
-        e3 = np.array([0.0, 0.0, 1.0])  # rim axial vector
+        n = self.n                   # spoke vector
+        e3 = np.array([0., 0., 1.])  # rim axial vector
 
         # Spoke nipple offset vector (relative to shear center)
         # TODO: Correctly calculate v-component of b_s based on rim radius.
         #       Set to zero for now.
-        b = np.array([self.rim_pt[2], 0.0, 0.0])
+        b = np.array([self.rim_pt[2], 0., 0.])
 
         K_e = self.EA / self.length
-        K_t = self.tension / self.length
+
+        if tension:
+            K_t = self.tension / self.length
+        else:
+            K_t = 0.
 
         k_f = K_e*np.outer(n, n) + K_t*(np.eye(3) - np.outer(n, n))
+
+        # Change in force applied by spoke due to rim rotation, phi
+        dFdphi = k_f.dot(np.cross(e3, b).reshape((3, 1)))
+
+        # Change in torque applied by spoke due to rim rotation
+        dTdphi = np.cross(b, e3).dot(k_f).dot(np.cross(b, e3))
+
+        k = np.zeros((4, 4))
+
+        k[0:3, 0:3] = k_f
+        k[0:3, 3] = dFdphi.reshape((3))
+        k[3, 0:3] = dFdphi.reshape(3)
+        k[3, 3] = dTdphi
+
+        return k
+
+    def calc_k_geom(self):
+        'Calculate the coefficient of the tension-dependent spoke stiffness matrix.'
+
+        n = self.n
+        e3 = np.array([0., 0., 1.])
+
+        # Spoke nipple offset vector (relative to shear center)
+        # TODO: Correctly calculate v-component of b_s based on rim radius.
+        #       Set to zero for now.
+        b = np.array([self.rim_pt[2], 0., 0.])
+
+        k_f = (1./self.length) * (np.eye(3) - np.outer(n, n))
 
         # Change in force applied by spoke due to rim rotation, phi
         dFdphi = k_f.dot(np.cross(e3, b).reshape((3, 1)))
@@ -211,9 +262,9 @@ class BicycleWheel:
 
             theta_hub = theta_rim + 2*n_cross*s_dir * (2*np.pi/n_spokes)
             if side == 1:
-                hub_pt = (self.hub.radius1, theta_hub, self.hub.width1)
+                hub_pt = (self.hub.diameter_right/2, theta_hub, self.hub.width_right)
             else:
-                hub_pt = (self.hub.radius2, theta_hub, -self.hub.width2)
+                hub_pt = (self.hub.diameter_left/2, theta_hub, -self.hub.width_left)
 
             spoke = Spoke(rim_pt, hub_pt, diameter, young_mod)
             self.spokes.append(spoke)
@@ -235,6 +286,32 @@ class BicycleWheel:
 
         for i in range(1, len(self.spokes), 2):
             self.spokes[i].tension = T_1
+
+    def calc_kbar(self, tension=True):
+        'Calculate smeared-spoke stiffness matrix'
+
+        k_bar = np.zeros((4, 4))
+
+        for s in self.spokes:
+            k_bar = k_bar + s.calc_k(tension=tension)/(2*np.pi*self.rim.radius)
+
+        return k_bar
+
+    def calc_kbar_geom(self):
+        'Calculate smeared-spoke stiffness matrix, geometric component'
+
+        k_bar = np.zeros((4, 4))
+
+        # Get scaling factor for tension on each side of the wheel
+        s_0 = self.spokes[0]
+        s_1 = self.spokes[1]
+        T_d = np.abs(s_0.n[0]*s_1.n[1]) + np.abs(s_1.n[0]*s_0.n[1])
+
+        for s in self.spokes:
+            k_bar = k_bar + \
+                np.abs(s.n[0])/T_d * s.calc_k_geom()/(np.pi*self.rim.radius)
+
+        return k_bar
 
     def calc_mass(self):
         'Calculate total mass of the wheel in kilograms.'
@@ -273,11 +350,11 @@ class BicycleWheel:
                                  linewidth=opts_d['rim_width']))
 
         # Draw hub
-        ax.add_artist(plt.Circle((0, 0), (self.hub.diam2/2)/R, fill=False,
+        ax.add_artist(plt.Circle((0, 0), (self.hub.diameter_left/2)/R, fill=False,
                                  color=opts_d['hub_ls_color'],
                                  linewidth=opts_d['hub_ls_width'],
                                  zorder=-1))
-        ax.add_artist(plt.Circle((0, 0), (self.hub.diam1/2)/R, fill=False,
+        ax.add_artist(plt.Circle((0, 0), (self.hub.diameter_right/2)/R, fill=False,
                                  color=opts_d['hub_ds_color'],
                                  linewidth=opts_d['hub_ds_width'],
                                  zorder=1))
@@ -310,3 +387,5 @@ class BicycleWheel:
 
     def __init__(self):
         self.spokes = []
+        self.rim = None
+        self.hub = None
