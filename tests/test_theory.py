@@ -42,14 +42,6 @@ def test_Tc_lin_quad(std_ncross):
 
     assert np.abs((Tc_lin[0] - Tc_quad[0]) / Tc_quad[0]) < 0.001
 
-# def test_Tc_MM_uncoupled(std_ncross):
-#     'Test '
-#     w = std_ncross(0)
-
-#     # Tc_mm = calc_buckling_tension_modematrix(smeared_spokes=True, )
-
-#     assert False
-
 def test_Klat_uncoupled(std_ncross):
     'Check that calc_lat_stiff() and Eqn. (2.71) give same result'
 
@@ -81,3 +73,16 @@ def test_Klat_uncoupled(std_ncross):
                               buckling=True, coupling=False)
 
     assert np.allclose(K_lat_mode, K_lat_mm)
+
+def test_Krad_rotsymm(std_ncross):
+    'Check that stiffness is identical at each spoke'
+
+    w = std_ncross(0)
+    w.rim.sec_params['y_s'] = 0.
+    w.apply_tension(1.)
+
+    Krad = [calc_rad_stiff(w, theta=s.rim_pt[1], N=36, tension=True,
+                           smeared_spokes=False, coupling=False, r0=True)
+            for s in w.spokes[:5]]
+
+    assert np.allclose(Krad, Krad[0])
