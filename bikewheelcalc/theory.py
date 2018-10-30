@@ -137,12 +137,12 @@ def lat_mode_stiff(wheel, n, smeared_spokes=True, buckling=True, tension=True):
                          .format(str(n)))
 
 
-def calc_lat_stiff(wheel, N=20, smeared_spokes=True, tension=True, buckling=True, coupling=False, r0=False):
+def calc_lat_stiff(wheel, theta=0., N=20, smeared_spokes=True, tension=True, buckling=True, coupling=False, r0=False):
     'Calculate lateral stiffness.'
 
     mm = ModeMatrix(wheel, N=N)
 
-    F_ext = mm.F_ext([0.], np.array([[1., 0., 0., 0.]]))
+    F_ext = mm.F_ext(0., [1., 0., 0., 0.])
     d = np.zeros(F_ext.shape)
 
     K = (mm.K_rim(tension=buckling, r0=r0) +
@@ -163,7 +163,7 @@ def calc_rad_stiff(wheel, theta=0., N=20, smeared_spokes=True, tension=True, buc
 
     mm = ModeMatrix(wheel, N=N)
 
-    F_ext = mm.F_ext([theta], np.array([[0., 1., 0., 0.]]))
+    F_ext = mm.F_ext(theta, [0., 1., 0., 0.])
     d = np.zeros(F_ext.shape)
 
     K = (mm.K_rim(tension=buckling, r0=r0) +
@@ -183,7 +183,7 @@ def calc_tor_stiff(wheel, theta=0., N=20, smeared_spokes=True, tension=True, buc
 
     mm = ModeMatrix(wheel, N=N)
 
-    F_ext = mm.F_ext([theta], np.array([[0., 0., 1., 0.]]))
+    F_ext = mm.F_ext(theta, [0., 0., 1., 0.])
     d = np.zeros(F_ext.shape)
 
     K = (mm.K_rim(tension=buckling, r0=r0) +
