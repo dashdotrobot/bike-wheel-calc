@@ -158,7 +158,7 @@ def calc_lat_stiff(wheel, N=20, smeared_spokes=True, tension=True, buckling=True
     return 1. / mm.B_theta(0.).dot(d)[0]
 
 
-def calc_rad_stiff(wheel, theta=0., N=20, smeared_spokes=True, tension=True, buckling=False, coupling=False, r0=False):
+def calc_rad_stiff(wheel, theta=0., N=20, smeared_spokes=True, tension=True, buckling=True, coupling=True, r0=False):
     'Calculate radial stiffness.'
 
     mm = ModeMatrix(wheel, N=N)
@@ -178,7 +178,7 @@ def calc_rad_stiff(wheel, theta=0., N=20, smeared_spokes=True, tension=True, buc
 
     return 1. / mm.B_theta(theta).dot(d)[1]
 
-def calc_tor_stiff(wheel, theta=0., N=20, smeared_spokes=True, tension=True, buckling=False, coupling=False, r0=False):
+def calc_tor_stiff(wheel, theta=0., N=20, smeared_spokes=True, tension=True, buckling=True, coupling=True, r0=False):
     'Calculate torsional (wind-up) stiffness in [N/rad].'
 
     mm = ModeMatrix(wheel, N=N)
