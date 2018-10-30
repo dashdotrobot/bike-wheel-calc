@@ -178,6 +178,26 @@ def calc_rad_stiff(wheel, theta=0., N=20, smeared_spokes=True, tension=True, buc
 
     return 1. / mm.B_theta(theta).dot(d)[1]
 
+def calc_tor_stiff(wheel, theta=0., N=20, smeared_spokes=True, tension=True, buckling=False, coupling=False, r0=False):
+    'Calculate torsional (wind-up) stiffness in [N/rad].'
+
+    mm = ModeMatrix(wheel, N=N)
+
+    F_ext = mm.F_ext([theta], np.array([[0., 0., 1., 0.]]))
+    d = np.zeros(F_ext.shape)
+
+    K = (mm.K_rim(tension=buckling, r0=r0) +
+         mm.K_spk(tension=tension, smeared_spokes=smeared_spokes))
+
+    if coupling:
+        d = np.linalg.solve(K, F_ext)
+    else:
+        ix_uc = mm.get_ix_uncoupled(dim='radial')
+        K = mm.get_K_uncoupled(K=K, dim='radial')
+        d[ix_uc] = np.linalg.solve(K, F_ext[ix_uc])
+
+    return wheel.rim.radius / mm.B_theta(theta).dot(d)[2]
+
 
 def calc_Pn_lat(wheel):
     'Lateral Pippard number (ratio of length scale to spoke spacing).'
