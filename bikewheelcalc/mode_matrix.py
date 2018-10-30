@@ -207,11 +207,8 @@ class ModeMatrix:
     def F_ext(self, f_theta, f):
         'Calculate external force vector.'
 
-        F_ext = np.zeros(4 + self.n_modes*8).reshape(4 + self.n_modes*8, 1)
-
-        for i in range(len(f_theta)):
-            Bi = self.B_theta(f_theta[i]).T
-            F_ext = F_ext + Bi.dot(f[i, :].reshape((4, 1)))
+        Bi = self.B_theta(f_theta).T
+        F_ext = Bi.dot(np.array(f).reshape((4, 1)))
 
         return F_ext.flatten()
 
