@@ -37,21 +37,8 @@ def test_hub_asymm_offset():
 
 
 # -----------------------------------------------------------------------------
-# Wheel tests
+# Spoke stiffness tests
 # -----------------------------------------------------------------------------
-
-def test_radial_geom(std_ncross):
-    'Initialize a wheel and check that the basic geometry is correct'
-
-    w = std_ncross(0)
-
-    # Check number of spokes
-    assert len(w.spokes) == 36
-
-    # Check spoke angle alpha
-    assert np.allclose([np.dot(s.n, np.array([0., 1., 0.]))
-                        for s in w.spokes],
-                        (0.3 - 0.025)/np.hypot(0.3 - 0.025, 0.025))
 
 @pytest.mark.parametrize('n_cross', [0, 1, 2, 3])
 def test_calc_k(std_ncross, n_cross):
@@ -133,6 +120,11 @@ def test_calc_kbar_offset_zero_eig(std_ncross, offset):
 
     assert np.allclose(np.min(w), 0.)
 
+
+# -----------------------------------------------------------------------------
+# Tension tests
+# -----------------------------------------------------------------------------
+
 @pytest.mark.parametrize('n_cross', [0, 1, 2, 3])
 def test_apply_tension_T_avg(std_ncross, n_cross):
     'Test that the apply_tension() method gives the correct T_avg'
@@ -193,3 +185,59 @@ def test_apply_tension_none(std_ncross):
 
     with pytest.raises(TypeError):
         w.apply_tension()
+
+
+# -----------------------------------------------------------------------------
+# Spoke lacing geometry tests
+# -----------------------------------------------------------------------------
+
+def test_radial_geom(std_ncross):
+    'Initialize a wheel and check that the basic geometry is correct'
+
+    w = std_ncross(0)
+
+    # Check number of spokes
+    assert len(w.spokes) == 36
+
+    # Check spoke angle alpha
+    assert np.allclose([np.dot(s.n, np.array([0., 1., 0.]))
+                        for s in w.spokes],
+                        (0.3 - 0.025)/np.hypot(0.3 - 0.025, 0.025))
+
+def test_lace_cross_nds(std_no_spokes):
+
+    w = std_no_spokes()
+
+    w.lace_cross_nds(n_spokes=18, n_cross=3, diameter=2.0e-3, young_mod=210e9, offset=0.01)
+
+    # Check theta positions
+    assert np.allclose([s.rim_pt[1] for s in w.spokes], np.arange(0., 2*np.pi, 2*np.pi/18.))
+
+    # Check leading spokes
+    assert np.allclose([s.hub_pt[1] for s in w.spokes[::2]],
+                       np.arange(0., 2.*np.pi, 2.*np.pi/9.)
+                       + 2*np.pi/18.*3.)
+
+    # Check trailing spokes
+    assert np.allclose([s.hub_pt[1] for s in w.spokes[1::2]],
+                       np.arange(2.*np.pi/18, 2.*np.pi, 2.*np.pi/9.)
+                       - 2.*np.pi/18.*3.)
+
+def test_lace_cross_ds(std_no_spokes):
+
+    w = std_no_spokes()
+
+    w.lace_cross_ds(n_spokes=18, n_cross=3, diameter=2.0e-3, young_mod=210e9, offset=0.01)
+
+    # Check theta positions
+    assert np.allclose([s.rim_pt[1] for s in w.spokes], np.arange(2*np.pi/36., 2*np.pi, 2*np.pi/18.))
+
+    # Check leading spokes
+    assert np.allclose([s.hub_pt[1] for s in w.spokes[::2]],
+                       np.arange(2*np.pi/36., 2.*np.pi, 2.*np.pi/9.)
+                       + 2*np.pi/18.*3.)
+
+    # Check trailing spokes
+    assert np.allclose([s.hub_pt[1] for s in w.spokes[1::2]],
+                       np.arange(2.*np.pi*(1./36. + 1./18.), 2.*np.pi, 2.*np.pi/9.)
+                       - 2.*np.pi/18.*3.)

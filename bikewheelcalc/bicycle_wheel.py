@@ -244,10 +244,53 @@ class BicycleWheel:
     for theoretical calculations and FEM models.
     """
 
-    def lace_radial(self, n_spokes, diameter, young_mod, offset=0.0):
-        'Generate spokes in a radial spoke pattern.'
 
-        self.lace_cross(n_spokes, 0, diameter, young_mod, offset)
+    def reorder_spokes(self):
+        'Ensure that spokes are ordered according to theta_rim'
+
+        a = np.argsort([s.rim_pt[1] for s in self.spokes])
+        self.spokes = [self.spokes[i] for i in a]
+
+    def lace_radial(self, n_spokes, diameter, young_mod, offset=0.0):
+        'Add spokes in a radial spoke pattern.'
+
+        return self.lace_cross(n_spokes, 0, diameter, young_mod, offset)
+
+    def lace_cross_nds(self, n_spokes, n_cross, diameter, young_mod, offset=0.):
+        'Add spokes on the non-drive-side with n_cross crossings'
+
+        # Start with a leading spoke at theta=0, and alternate
+        for s in range(n_spokes):
+            theta_rim = 2*np.pi/n_spokes * s
+            s_dir = 2*((s + 1) % 2) - 1  # [1, -1, 1, ...]
+
+            rim_pt = (self.rim.radius, theta_rim, offset)
+            hub_pt = (self.hub.diameter_left/2,
+                      theta_rim + 2*np.pi/n_spokes*n_cross*s_dir,
+                      self.hub.width_left)
+
+            self.spokes.append(Spoke(rim_pt, hub_pt, diameter, young_mod))
+
+        self.reorder_spokes()
+        return True
+
+    def lace_cross_ds(self, n_spokes, n_cross, diameter, young_mod, offset=0.):
+        'Add spokes on the drive-side with n_cross crossings'
+
+        # Start with a leading spoke at theta=0, and alternate
+        for s in range(n_spokes):
+            theta_rim = 2*np.pi/n_spokes * (s + 0.5)
+            s_dir = 2*((s + 1) % 2) - 1  # [1, -1, 1, ...]
+
+            rim_pt = (self.rim.radius, theta_rim, -offset)
+            hub_pt = (self.hub.diameter_right/2,
+                      theta_rim + 2*np.pi/n_spokes*n_cross*s_dir,
+                      -self.hub.width_right)
+
+            self.spokes.append(Spoke(rim_pt, hub_pt, diameter, young_mod))
+
+        self.reorder_spokes()
+        return True
 
     def lace_cross(self, n_spokes, n_cross, diameter, young_mod, offset=0.0):
         'Generate spokes in a "cross" pattern with n_cross crossings.'
@@ -255,21 +298,10 @@ class BicycleWheel:
         # Remove any existing spokes
         self.spokes = []
 
-        for s in range(n_spokes):
-            theta_rim = 2*np.pi/n_spokes * s
-            side = 2*((s + 1) % 2) - 1
-            s_dir = 2*((s % 4) < 2) - 1
+        self.lace_cross_ds(n_spokes//2, n_cross, diameter, young_mod, offset)
+        self.lace_cross_nds(n_spokes//2, n_cross, diameter, young_mod, offset)
 
-            rim_pt = (self.rim.radius, theta_rim, side*offset)
-
-            theta_hub = theta_rim + 2*n_cross*s_dir * (2*np.pi/n_spokes)
-            if side > 0:
-                hub_pt = (self.hub.diameter_right/2, theta_hub, self.hub.width_left)
-            else:
-                hub_pt = (self.hub.diameter_left/2, theta_hub, -self.hub.width_right)
-
-            spoke = Spoke(rim_pt, hub_pt, diameter, young_mod)
-            self.spokes.append(spoke)
+        return True
 
     def apply_tension(self, T_avg=None, T_left=None, T_right=None):
         'Apply tension to spokes based on average radial tension.'
