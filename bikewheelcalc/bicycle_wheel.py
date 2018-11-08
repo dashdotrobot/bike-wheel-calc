@@ -99,10 +99,10 @@ class Hub:
     """Hub consisting of two parallel, circular flanges.
 
     Args:
-        diameter_left: diameter of the left-side hub flange.
-        diameter_right: diameter of the drive-side hub flange.
-        width_left: distance from rim plane to left-side flange.
-        width_right: distance from rim plane to drive-side flange.
+        diameter_nds: diameter of the left-side hub flange.
+        diameter_ds: diameter of the drive-side hub flange.
+        width_nds: distance from rim plane to left-side flange.
+        width_ds: distance from rim plane to drive-side flange.
 
     Usage:
         Symmetric:           Hub(diameter=0.05, width=0.05)
@@ -110,32 +110,32 @@ class Hub:
         Asymmetric, offset:  Hub(diameter_left=0.04, diameter_right=0.06, width=0.05, offset=0.01)
     """
 
-    def __init__(self, diameter=None, diameter_left=None, diameter_right=None,
-                 width=None, width_left=None, width_right=None, offset=None):
+    def __init__(self, diameter=None, diameter_nds=None, diameter_ds=None,
+                 width=None, width_nds=None, width_ds=None, offset=None):
 
         # Set flange diameters
-        self.diameter_left = diameter
-        self.diameter_right = diameter
+        self.diameter_nds = diameter
+        self.diameter_ds = diameter
 
-        if isinstance(diameter_left, float):
-            self.diameter_left = diameter_left
-        if isinstance(diameter_right, float):
-            self.diameter_right = diameter_right
+        if isinstance(diameter_nds, float):
+            self.diameter_nds = diameter_nds
+        if isinstance(diameter_ds, float):
+            self.diameter_ds = diameter_ds
 
         # Set flange widths
         if isinstance(width, float):
             if offset is None:
                 offset = 0.
 
-            self.width_left = width/2 + offset
-            self.width_right = width/2 - offset
+            self.width_nds = width/2 + offset
+            self.width_ds = width/2 - offset
 
-            if (width_left is not None) or (width_right is not None):
+            if (width_nds is not None) or (width_ds is not None):
                 raise ValueError('Cannot specify width_left or width_right when using the offset parameter.')
 
-        elif isinstance(width_left, float) and isinstance(width_right, float):
-            self.width_left = width_left
-            self.width_right = width_right
+        elif isinstance(width_nds, float) and isinstance(width_ds, float):
+            self.width_nds = width_nds
+            self.width_ds = width_ds
         else:
             raise ValueError('width_left and width_right must both be defined if not using the width parameter.')
 
@@ -265,9 +265,9 @@ class BicycleWheel:
             s_dir = 2*((s + 1) % 2) - 1  # [1, -1, 1, ...]
 
             rim_pt = (self.rim.radius, theta_rim, offset)
-            hub_pt = (self.hub.diameter_left/2,
+            hub_pt = (self.hub.diameter_nds/2,
                       theta_rim + 2*np.pi/n_spokes*n_cross*s_dir,
-                      self.hub.width_left)
+                      self.hub.width_nds)
 
             self.spokes.append(Spoke(rim_pt, hub_pt, diameter, young_mod))
 
@@ -283,9 +283,9 @@ class BicycleWheel:
             s_dir = 2*((s + 1) % 2) - 1  # [1, -1, 1, ...]
 
             rim_pt = (self.rim.radius, theta_rim, -offset)
-            hub_pt = (self.hub.diameter_right/2,
+            hub_pt = (self.hub.diameter_ds/2,
                       theta_rim + 2*np.pi/n_spokes*n_cross*s_dir,
-                      -self.hub.width_right)
+                      -self.hub.width_ds)
 
             self.spokes.append(Spoke(rim_pt, hub_pt, diameter, young_mod))
 
