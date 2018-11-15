@@ -2,6 +2,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+from warnings import warn
 from .helpers import pol2rect
 
 
@@ -407,8 +408,17 @@ class BicycleWheel:
     def calc_mass(self):
         'Calculate total mass of the wheel in kilograms.'
 
-        # TODO
-        pass
+        m_rim = self.rim.calc_mass()
+        if m_rim is None:
+            m_rim = 0.
+            warn('Rim density is not specified.')
+
+        m_spokes = np.array([s.calc_mass() for s in self.spokes])
+        if np.any(m_spokes == None):
+            m_spokes = np.where(m_spokes == None, 0., m_spokes)
+            warn('Some spoke densities are not specified.')
+
+        return m_rim + np.sum(m_spokes)
 
     def calc_rot_inertia(self):
         'Calculate rotational inertia about the hub axle.'
