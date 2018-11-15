@@ -301,3 +301,24 @@ def test_I_rim_only():
         I_wheel = w.calc_rot_inertia()
 
     assert np.allclose(I_wheel, (2*np.pi*0.3*100e-6)*0.3**2)
+
+def test_I_spokes_only():
+    'Check that spoke inertias are correctly calculated'
+
+    w = BicycleWheel()
+    w.hub = Hub(diameter=0.050, width=0.05)
+    w.rim = Rim(radius=0.3, area=100e-6,
+                I11=25./26e9, I22=200./69e9, I33=100./69e9, Iw=0.0,
+                young_mod=69e9, shear_mod=26e9)
+
+    w.lace_radial(n_spokes=36, diameter=1.8e-3, young_mod=210e9, offset=0., density=1.0)
+
+    # Calculate inertia of a single spoke
+    m_spk = np.hypot(0.3 - 0.025, 0.025) * np.pi/4*(1.8e-3)**2 * 1.0
+    I_spk = m_spk*(0.3 - 0.025)**2/12. + m_spk*(0.5*(0.025 + 0.3))**2
+
+    # Should return a warning that the rim density is not specified
+    with pytest.warns(UserWarning):
+        I_wheel = w.calc_rot_inertia()
+
+    assert np.allclose(I_wheel, 36.*I_spk)
