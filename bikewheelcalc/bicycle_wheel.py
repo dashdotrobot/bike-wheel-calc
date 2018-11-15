@@ -244,7 +244,7 @@ class Spoke:
         'Return the spoke rotational inertia about its center-of-mass'
 
         if self.density is not None:
-            return self.calc_mass()*self.length**2 / 12.
+            return self.calc_mass()*(self.length*self.n[1])**2 / 12.
         else:
             return None
 
@@ -423,8 +423,21 @@ class BicycleWheel:
     def calc_rot_inertia(self):
         'Calculate rotational inertia about the hub axle.'
 
-        # TODO
-        pass
+        I_rim = self.rim.calc_rot_inertia()
+        if I_rim is None:
+            I_rim = 0.
+            warn('Rim density is not specified.')
+
+        I_spk = np.array([s.calc_rot_inertia() for s in self.spokes])
+        if np.any(I_spk == None):
+            I_spokes = 0.
+            warn('Some spoke densities are not specified.')
+        else:
+            mr2_spk = np.array([s.calc_mass()*(0.5*(s.hub_pt[0] + s.rim_pt[0]))**2
+                                for s in self.spokes])
+            I_spokes = np.sum(I_spk) + np.sum(mr2_spk)
+
+        return I_rim + I_spokes
 
     def draw(self, ax, opts={}):
         'Draw a graphical representation of the wheel'

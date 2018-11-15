@@ -284,3 +284,20 @@ def test_mass_spokes_only():
         m_wheel = w.calc_mass()
 
     assert np.allclose(m_wheel, 36.*m_spk)
+
+def test_I_rim_only():
+    'Check that wheel inertia returns rim inertia if no spoke density is given'
+
+    w = BicycleWheel()
+    w.hub = Hub(diameter=0.050, width=0.05)
+    w.rim = Rim(radius=0.3, area=100e-6,
+                I11=25./26e9, I22=200./69e9, I33=100./69e9, Iw=0.0,
+                young_mod=69e9, shear_mod=26e9, density=1.)
+
+    w.lace_cross(n_spokes=36, n_cross=3, diameter=1.8e-3, young_mod=210e9, offset=0.)
+
+    # Should return a warning that some spoke densities are not specified
+    with pytest.warns(UserWarning):
+        I_wheel = w.calc_rot_inertia()
+
+    assert np.allclose(I_wheel, (2*np.pi*0.3*100e-6)*0.3**2)
