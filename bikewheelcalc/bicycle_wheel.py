@@ -109,8 +109,8 @@ class Hub:
 
     Usage:
         Symmetric:           Hub(diameter=0.05, width=0.05)
-        Asymmetric, specify: Hub(diameter=0.05, width_left=0.03, width_right=0.02)
-        Asymmetric, offset:  Hub(diameter_left=0.04, diameter_right=0.06, width=0.05, offset=0.01)
+        Asymmetric, specify: Hub(diameter=0.05, width_nds=0.03, width_ds=0.02)
+        Asymmetric, offset:  Hub(diameter_nds=0.04, diameter_ds=0.06, width=0.05, offset=0.01)
     """
 
     def __init__(self, diameter=None, diameter_nds=None, diameter_ds=None,
