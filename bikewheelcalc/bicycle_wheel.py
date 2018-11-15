@@ -10,6 +10,7 @@ class Rim:
 
     def __init__(self, radius, area, I11, I22,
                  I33, Iw, young_mod, shear_mod,
+                 density=None,
                  sec_type='general', sec_params={}):
         self.radius = radius
         self.area = area
@@ -19,23 +20,25 @@ class Rim:
         self.Iw = Iw
         self.young_mod = young_mod
         self.shear_mod = shear_mod
+
+        self.density = density
         self.sec_type = sec_type
         self.sec_params = sec_params
 
     @classmethod
     def general(cls, radius, area, I11, I22,
-                I33, Iw, young_mod, shear_mod):
+                I33, Iw, young_mod, shear_mod, density=None):
         'Define a rim with arbitrary section properties.'
 
         r = cls(radius=radius,
                 area=area, I11=I11, I22=I22, I33=I33, Iw=Iw,
-                young_mod=young_mod, shear_mod=shear_mod,
+                young_mod=young_mod, shear_mod=shear_mod, density=density,
                 sec_type='general', sec_params={})
 
         return r
 
     @classmethod
-    def box(cls, radius, young_mod, shear_mod, w, h, t):
+    def box(cls, radius, w, h, t, young_mod, shear_mod, density=None):
         """Define a rim from a box cross-section.
 
         Args:
@@ -57,14 +60,14 @@ class Rim:
 
         r = cls(radius=radius,
                 area=area, I11=I11, I22=I22, I33=I33, Iw=Iw,
-                young_mod=young_mod, shear_mod=shear_mod,
+                young_mod=young_mod, shear_mod=shear_mod, density=density,
                 sec_type='box', sec_params={'closed': True,
                                             'w': w, 'h': h, 't': t})
 
         return r
 
     @classmethod
-    def C_channel(cls, radius, young_mod, shear_mod, w, h, t):
+    def C_channel(cls, radius, w, h, t, young_mod, shear_mod, density=None):
         'Construct a rim from a C channel cross-section.'
 
         area = (w+t)*t + 2*(h-t)*t
@@ -87,7 +90,7 @@ class Rim:
 
         r = cls(radius=radius,
                 area=area, I11=I11, I22=I22, I33=I33, Iw=Iw,
-                young_mod=young_mod, shear_mod=shear_mod,
+                young_mod=young_mod, shear_mod=shear_mod, density=density,
                 sec_type='C', sec_params={'closed': False,
                                           'w': w, 'h': h, 't': t,
                                           'y_c': y_c, 'y_s': y_s})
