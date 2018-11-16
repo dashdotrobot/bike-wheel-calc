@@ -94,7 +94,7 @@ class Rim:
                 young_mod=young_mod, shear_mod=shear_mod, density=density,
                 sec_type='C', sec_params={'closed': False,
                                           'w': w, 'h': h, 't': t,
-                                          'y_c': y_c, 'y_s': y_s})
+                                          'y_c': y_c, 'y_s': y_s, 'y_0': y_c - y_s})
 
         return r
 

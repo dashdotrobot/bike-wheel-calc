@@ -15,8 +15,8 @@ def calc_buckling_tension(wheel, approx='linear', N=20):
         CT = GJ + EIw*n**2/R**2
 
         y0 = 0.
-        if 'y_s' in wheel.rim.sec_params:
-            y0 = wheel.rim.sec_params['y_s']
+        if 'y_0' in wheel.rim.sec_params:
+            y0 = wheel.rim.sec_params['y_0']
 
         A = (R**2*kT - n**2*R)*y0
 
@@ -46,9 +46,9 @@ def calc_buckling_tension(wheel, approx='linear', N=20):
     # shortcuts
     ns = len(wheel.spokes)
     R = wheel.rim.radius
-    EI = wheel.rim.young_mod * wheel.rim.I22
-    EIw = wheel.rim.young_mod * wheel.rim.Iw
-    GJ = wheel.rim.shear_mod * wheel.rim.I11
+    EI = wheel.rim.young_mod * wheel.rim.I_lat
+    EIw = wheel.rim.young_mod * wheel.rim.I_warp
+    GJ = wheel.rim.shear_mod * wheel.rim.J_tor
 
     kbar = wheel.calc_kbar(tension=False)
     kuu, kup, kpp = (kbar[0, 0], kbar[0, 3], kbar[3, 3])
@@ -116,9 +116,9 @@ def lat_mode_stiff(wheel, n, smeared_spokes=True, buckling=True, tension=True):
     # shortcuts
     ns = len(self.wheel.spokes)
     R = self.wheel.rim.radius
-    EI = self.wheel.rim.young_mod * self.wheel.rim.I22
-    EIw = self.wheel.rim.young_mod * self.wheel.rim.Iw
-    GJ = self.wheel.rim.shear_mod * self.wheel.rim.I11
+    EI = self.wheel.rim.young_mod * self.wheel.rim.I_lat
+    EIw = self.wheel.rim.young_mod * self.wheel.rim.I_warp
+    GJ = self.wheel.rim.shear_mod * self.wheel.rim.J_tor
     CT = GJ + EIw*n**2/R**2
 
     Tb = 0.
@@ -206,8 +206,8 @@ def calc_Pn_lat(wheel):
     k_uu = k_sp[0, 0]
 
     n_spokes = len(wheel.spokes)
-    EI = wheel.rim.young_mod * wheel.rim.I22
-    GJ = wheel.rim.shear_mod * wheel.rim.I11
+    EI = wheel.rim.young_mod * wheel.rim.I_lat
+    GJ = wheel.rim.shear_mod * wheel.rim.J_tor
     cc = (GJ/EI)/(GJ/EI + 1)
 
     Pn_lat = n_spokes/(8*np.pi*wheel.rim.radius) *\
@@ -223,7 +223,7 @@ def calc_Pn_rad(wheel):
     k_vv = k_sp[1, 1]
 
     n_spokes = len(wheel.spokes)
-    EI = wheel.rim.young_mod * wheel.rim.I33
+    EI = wheel.rim.young_mod * wheel.rim.I_rad
 
     Pn_rad = n_spokes/(2*np.pi*wheel.rim.radius) *\
         np.power(4*EI / k_vv, 0.25)
@@ -237,7 +237,7 @@ def calc_lambda_lat(wheel):
     k_sp = calc_continuum_stiff(wheel)
     k_uu = k_sp[0, 0]
 
-    return k_uu*wheel.rim.radius**4 / (wheel.rim.young_mod * wheel.rim.I22)
+    return k_uu*wheel.rim.radius**4 / (wheel.rim.young_mod * wheel.rim.I_lat)
 
 
 def calc_lambda_rad(wheel):
@@ -246,7 +246,7 @@ def calc_lambda_rad(wheel):
     k_sp = calc_continuum_stiff(wheel)
     k_vv = k_sp[1, 1]
 
-    return k_vv*wheel.rim.radius**4 / (wheel.rim.young_mod * wheel.rim.I33)
+    return k_vv*wheel.rim.radius**4 / (wheel.rim.young_mod * wheel.rim.I_rad)
 
 
 def print_continuum_stats(wheel):
@@ -273,23 +273,21 @@ def mode_stiff(wheel, n, tension=0.0):
     ns = len(wheel.spokes)
     R = wheel.rim.radius
     # l = wheel.spokes[0].length
-    EI = wheel.rim.young_mod * wheel.rim.I22
-    EIw = wheel.rim.young_mod * wheel.rim.Iw
-    GJ = wheel.rim.shear_mod * wheel.rim.I11
+    EI = wheel.rim.young_mod * wheel.rim.I_lat
+    EIw = wheel.rim.young_mod * wheel.rim.I_warp
+    GJ = wheel.rim.shear_mod * wheel.rim.J_tor
 
-    rx = np.sqrt(wheel.rim.I22 / wheel.rim.area)
-    ry = np.sqrt(wheel.rim.I33 / wheel.rim.area)
+    rx = np.sqrt(wheel.rim.I_lat / wheel.rim.area)
+    ry = np.sqrt(wheel.rim.I_rad / wheel.rim.area)
 
     CT = GJ + EIw*n**2/R**2
 
     # Shear center coordinate
-    if 'y_s' in wheel.rim.sec_params:
-        y0 = wheel.rim.sec_params['y_c'] -\
-            wheel.rim.sec_params['y_s']
+    if 'y_0' in wheel.rim.sec_params:
+        y0 = wheel.rim.sec_params['y_0']
     else:
         y0 = 0.0
 
-    # Nr = ns*tension / (2*pi)
     Nr = np.sum([s.tension*s.n[1] for s in wheel.spokes]) / (2*pi)
 
     if n == 0:
