@@ -15,8 +15,8 @@ def test_Tc_linear(std_ncross):
     K_s = 210e9*np.pi/4*(1.8e-3)**2 / np.hypot(0.3 - 0.025, 0.025)
 
     R = w.rim.radius
-    EI = w.rim.young_mod*w.rim.I22
-    GJ = w.rim.shear_mod*w.rim.I11
+    EI = w.rim.young_mod*w.rim.I_lat
+    GJ = w.rim.shear_mod*w.rim.J_tor
 
     c1_2 = (0.025/np.hypot(0.3 - 0.025, 0.025))**2
     c2 = (0.3 - 0.025)/np.hypot(0.3 - 0.025, 0.025)
@@ -36,7 +36,7 @@ def test_Tc_lin_quad(std_ncross):
     'Linear and Quadratic should give same result when y0~0'
 
     w = std_ncross(0)
-    w.rim.sec_params = {'y_s': 0.00001}
+    w.rim.sec_params = {'y_0': 0.00001}
     Tc_lin = calc_buckling_tension(w, approx='linear', N=20)
     Tc_quad = calc_buckling_tension(w, approx='quadratic', N=20)
 
@@ -46,13 +46,13 @@ def test_Klat_uncoupled(std_ncross):
     'Check that calc_lat_stiff() and Eqn. (2.71) give same result'
 
     w = std_ncross(0)
-    w.rim.sec_params['y_s'] = 0.
+    w.rim.sec_params['y_0'] = 0.
     w.apply_tension(100.)
 
     # Analytical solution
     R = w.rim.radius
-    EI = w.rim.young_mod*w.rim.I22
-    GJ = w.rim.shear_mod*w.rim.I11
+    EI = w.rim.young_mod*w.rim.I_lat
+    GJ = w.rim.shear_mod*w.rim.J_tor
 
     kuu = w.calc_kbar(tension=True)[0, 0]
     Tb = np.sum([s.tension*s.n[1] for s in w.spokes]) / (2.*np.pi*R)
@@ -77,7 +77,7 @@ def test_Krad_rotsymm(std_ncross):
     'Check that stiffness is identical at each spoke'
 
     w = std_ncross(0)
-    w.rim.sec_params['y_s'] = 0.
+    w.rim.sec_params['y_0'] = 0.
     w.apply_tension(1.)
 
     Krad = [calc_rad_stiff(w, theta=s.rim_pt[1], N=36, tension=True,

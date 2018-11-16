@@ -70,8 +70,8 @@ def test_K_lat(std_ncross):
 
     # Analytical solution
     R = w.rim.radius
-    EI = w.rim.young_mod*w.rim.I22
-    GJ = w.rim.shear_mod*w.rim.I11
+    EI = w.rim.young_mod*w.rim.I_lat
+    GJ = w.rim.shear_mod*w.rim.J_tor
 
     kuu = w.calc_kbar(tension=True)[0, 0]
     Tb = np.sum([s.tension*s.n[1] for s in w.spokes]) / (2.*np.pi*R)
