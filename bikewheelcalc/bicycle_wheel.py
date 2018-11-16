@@ -9,30 +9,30 @@ from .helpers import pol2rect
 class Rim:
     'Rim definition.'
 
-    def __init__(self, radius, area, I11, I22,
-                 I33, Iw, young_mod, shear_mod,
-                 density=None,
+    def __init__(self, radius, area,
+                 I_rad, I_lat, J_tor, I_warp,
+                 young_mod, shear_mod, density=None,
                  sec_type='general', sec_params={}):
         self.radius = radius
         self.area = area
-        self.I11 = I11
-        self.I22 = I22
-        self.I33 = I33
-        self.Iw = Iw
+        self.I_rad = I_rad
+        self.I_lat = I_lat
+        self.J_tor = J_tor
+        self.I_warp = I_warp
         self.young_mod = young_mod
         self.shear_mod = shear_mod
-
         self.density = density
         self.sec_type = sec_type
         self.sec_params = sec_params
 
     @classmethod
-    def general(cls, radius, area, I11, I22,
-                I33, Iw, young_mod, shear_mod, density=None):
+    def general(cls, radius, area,
+                I_rad, I_lat, J_tor, I_warp,
+                young_mod, shear_mod, density=None):
         'Define a rim with arbitrary section properties.'
 
-        r = cls(radius=radius,
-                area=area, I11=I11, I22=I22, I33=I33, Iw=Iw,
+        r = cls(radius=radius, area=area,
+                I_rad=I_rad, I_lat=I_lat, J_tor=J_tor, I_warp=I_warp,
                 young_mod=young_mod, shear_mod=shear_mod, density=density,
                 sec_type='general', sec_params={})
 
@@ -50,17 +50,17 @@ class Rim:
         area = 2*(w+t/2)*t + 2*(h-t/2)*t
 
         # Torsion constant
-        I11 = 2*t*(w*h)**2 / (w + h)
+        J_tor = 2*t*(w*h)**2 / (w + h)
 
         # Moments of area
-        I33 = 2*(t*(h+t)**3)/12 + 2*((w-t)*t**3/12 + (w-t)*t*(h/2)**2)
-        I22 = 2*(t*(w+t)**3)/12 + 2*((h-t)*t**3/12 + (h-t)*t*(w/2)**2)
+        I_rad = 2*(t*(h+t)**3)/12 + 2*((w-t)*t**3/12 + (w-t)*t*(h/2)**2)
+        I_lat = 2*(t*(w+t)**3)/12 + 2*((h-t)*t**3/12 + (h-t)*t*(w/2)**2)
 
-        # Warping constant
-        Iw = 0.0  # closed thin-walled section
+        # Warping constant, closed thin-walled section
+        I_warp = I_warp
 
-        r = cls(radius=radius,
-                area=area, I11=I11, I22=I22, I33=I33, Iw=Iw,
+        r = cls(radius=radius, area=area,
+                I_rad=I_rad, I_lat=I_lat, J_tor=J_tor, I_warp=I_warp,
                 young_mod=young_mod, shear_mod=shear_mod, density=density,
                 sec_type='box', sec_params={'closed': True,
                                             'w': w, 'h': h, 't': t})
@@ -76,21 +76,21 @@ class Rim:
         # Torsion and warping constants
         # homepage.tudelft.nl/p3r3s/b16_chap7.pdf
 
-        I11 = 1.0/3.0 * t**3 * (w + 2*(h-t))
-        Iw = (t*h**3*w**2/12) * (3*h + 2*w)/(6*h + w)
+        J_tor = 1.0/3.0 * t**3 * (w + 2*(h-t))
+        I_warp = (t*h**3*w**2/12) * (3*h + 2*w)/(6*h + w)
 
         # Moments of area -----------------------------
         # Centroid location
         y_c = (h-t)*t*h / area
-        I33 = (w+t)*t**3/12 + (w+t)*t*y_c**2 +\
+        I_rad = (w+t)*t**3/12 + (w+t)*t*y_c**2 +\
             2 * (t*(h-t)**3/12 + (h-t)*t*(h/2 - y_c)**2)
-        I22 = (t*w**3)/12 + 2*(((h-t)*t**3)/12 + (h-t)*t*(w/2)**2)
+        I_lat = (t*w**3)/12 + 2*(((h-t)*t**3)/12 + (h-t)*t*(w/2)**2)
 
         # Shear center --------------------------------
         y_s = -3*h**2/(6*h + w)
 
-        r = cls(radius=radius,
-                area=area, I11=I11, I22=I22, I33=I33, Iw=Iw,
+        r = cls(radius=radius, area=area,
+                I_rad=I_rad, I_lat=I_lat, J_tor=J_tor, I_warp=I_warp,
                 young_mod=young_mod, shear_mod=shear_mod, density=density,
                 sec_type='C', sec_params={'closed': False,
                                           'w': w, 'h': h, 't': t,
