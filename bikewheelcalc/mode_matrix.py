@@ -40,60 +40,60 @@ class ModeMatrix:
 
         w = self.wheel
 
-        R = w.rim.radius                   # rim radius
-        EA = w.rim.young_mod * w.rim.area  # axial stiffness
-        EI1 = w.rim.young_mod * w.rim.I33  # radial bending
-        EI2 = w.rim.young_mod * w.rim.I22  # lateral bending
-        EIw = w.rim.young_mod * w.rim.Iw   # warping constant
-        GJ = w.rim.shear_mod * w.rim.I11   # torsion constant
+        R = w.rim.radius                        # rim radius
+        EA = w.rim.young_mod * w.rim.area       # axial stiffness
+        EI_rad = w.rim.young_mod * w.rim.I_rad  # radial bending
+        EI_lat = w.rim.young_mod * w.rim.I_lat  # lateral bending
+        EIw = w.rim.young_mod * w.rim.I_warp    # warping constant
+        GJ = w.rim.shear_mod * w.rim.J_tor      # torsion constant
 
         y0 = 0.  # shear-center offset
-        if 'y_s' in w.rim.sec_params:
-            y0 = w.rim.sec_params['y_s']
+        if 'y_0' in w.rim.sec_params:
+            y0 = w.rim.sec_params['y_0']
 
         r02 = 0.
         if r0:
-            r02 = EI1/EA + EI2/EA + y0**2
+            r02 = EI_rad/EA + EI_lat/EA + y0**2
 
         K_rim_matl = np.zeros((4 + self.n_modes*8, 4 + self.n_modes*8))
 
         # zero mode
         K_rim_matl[1, 1] = 2*pi*EA/R
-        K_rim_matl[3, 3] = 2*pi*EI2/R
+        K_rim_matl[3, 3] = 2*pi*EI_lat/R
 
         # higher modes
         for n in range(1, self.n_modes + 1):
             i0 = 4 + (n-1)*8
 
             # k_vv
-            K_rim_matl[i0+2, i0+2] = EI1*pi/R**3*n**4 + EA*pi/R*(1 + y0/R*n**2)**2
+            K_rim_matl[i0+2, i0+2] = EI_rad*pi/R**3*n**4 + EA*pi/R*(1 + y0/R*n**2)**2
             K_rim_matl[i0+3, i0+3] = K_rim_matl[i0+2, i0+2]
 
             # k_ww
-            K_rim_matl[i0+4, i0+4] = EI1*pi/R**3*n**2 + EA*pi/R*n**2*(1 + y0/R)**2
+            K_rim_matl[i0+4, i0+4] = EI_rad*pi/R**3*n**2 + EA*pi/R*n**2*(1 + y0/R)**2
             K_rim_matl[i0+5, i0+5] = K_rim_matl[i0+4, i0+4]
 
             # k_vw
-            K_rim_matl[i0+2, i0+5] = -EI1*pi/R**3*n**3 -\
+            K_rim_matl[i0+2, i0+5] = -EI_rad*pi/R**3*n**3 -\
                 EA*pi*n/R*(1 + y0/R*(1 + n**2) + y0**2/R**2*n**2)
             K_rim_matl[i0+5, i0+2] = K_rim_matl[i0+2, i0+5]
             K_rim_matl[i0+3, i0+4] = -K_rim_matl[i0+2, i0+5]
             K_rim_matl[i0+4, i0+3] = -K_rim_matl[i0+2, i0+5]
 
             # k_uu
-            K_rim_matl[i0+0, i0+0] = (EI2*pi/R**3*n**4 + EIw*pi/R**5*n**4 +
+            K_rim_matl[i0+0, i0+0] = (EI_lat*pi/R**3*n**4 + EIw*pi/R**5*n**4 +
                                       GJ*pi/R**3*n**2)
             K_rim_matl[i0+1, i0+1] = K_rim_matl[i0+0, i0+0]
 
             # k_up
-            K_rim_matl[i0+0, i0+6] = -(EI2*pi/R**2*n**2 + EIw*pi/R**4*n**4 +
+            K_rim_matl[i0+0, i0+6] = -(EI_lat*pi/R**2*n**2 + EIw*pi/R**4*n**4 +
                                   GJ*pi/R**2*n**2)
             K_rim_matl[i0+6, i0+0] = K_rim_matl[i0+0, i0+6]
             K_rim_matl[i0+1, i0+7] = K_rim_matl[i0+0, i0+6]
             K_rim_matl[i0+7, i0+1] = K_rim_matl[i0+0, i0+6]
 
             # k_pp
-            K_rim_matl[i0+6, i0+6] = (EI2*pi/R + EIw*pi/R**3*n**4 + GJ*pi/R*n**2)
+            K_rim_matl[i0+6, i0+6] = (EI_lat*pi/R + EIw*pi/R**3*n**4 + GJ*pi/R*n**2)
             K_rim_matl[i0+7, i0+7] = K_rim_matl[i0+6, i0+6]
 
         return K_rim_matl
@@ -106,12 +106,12 @@ class ModeMatrix:
         R = w.rim.radius
 
         y0 = 0.  # shear-center offset
-        if 'y_s' in w.rim.sec_params:
-            y0 = w.rim.sec_params['y_s']
+        if 'y_0' in w.rim.sec_params:
+            y0 = w.rim.sec_params['y_0']
 
         r02 = 0.
         if r0:
-            r02 = w.rim.I33/w.rim.area + w.rim.I22/w.rim.area + y0**2
+            r02 = w.rim.I_rad/w.rim.area + w.rim.I_lat/w.rim.area + y0**2
 
         K_rim_geom = np.zeros((4 + self.n_modes*8, 4 + self.n_modes*8))
 
