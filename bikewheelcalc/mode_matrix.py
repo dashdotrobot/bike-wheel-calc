@@ -237,6 +237,22 @@ class ModeMatrix:
 
         return K[np.ix_(ix, ix)]
 
+    def rim_def_lat(self, theta, dm):
+        'Calculate lateral rim deflection at the location(s) specified by theta'
+        return self.B_theta(theta, 0).dot(dm)
+
+    def rim_def_rad(self, theta, dm):
+        'Calculate radial rim deflection at the location(s) specified by theta.'
+        return self.B_theta(theta, 1).dot(dm)
+
+    def rim_def_tan(self, theta, dm):
+        'Calculate tangential rim deflection at the location(s) specified by theta.'
+        return self.B_theta(theta, 2).dot(dm)
+
+    def rim_def_rot(self, theta, dm):
+        'Calculate rim cross-section rotation at the location(s) specified by theta.'
+        return self.B_theta(theta, 3).dot(dm)
+
     def __init__(self, wheel, N=10):
 
         self.wheel = wheel
