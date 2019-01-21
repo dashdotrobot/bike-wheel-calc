@@ -19,7 +19,7 @@ mm = ModeMatrix(wheel, N=24)
 F_ext = mm.F_ext(0., np.array([0., 500., 0., 0.]))
 
 # Calculate stiffness matrix
-K = mm.K_rim(tension=False) + mm.K_spk(smeared_spokes=True, tension=False)
+K = mm.K_rim(tension=False) + mm.K_spk(smeared_spokes=False, tension=False)
 
 # Solve for the mode coefficients
 dm = np.linalg.solve(K, F_ext)
@@ -35,12 +35,11 @@ dT = [-s.EA/s.length *
       for s in wheel.spokes]
 
 
-# Draw deformed wheel
+# Plot radial deformation and tension change
 fig, ax = plt.subplots(nrows=2, figsize=(5, 5))
 
 ax[0].plot(theta, 1000.*rad_def)
 ax[0].set_xlim(-np.pi, np.pi)
-ax[0].set_xlabel('theta')
 ax[0].set_ylabel('Radial deflection [mm]')
 
 ax[1].bar(np.arange(-np.pi, np.pi, 2*np.pi/36), np.roll(dT, 18),
@@ -48,6 +47,8 @@ ax[1].bar(np.arange(-np.pi, np.pi, 2*np.pi/36), np.roll(dT, 18),
 ax[1].set_xlim(-np.pi, np.pi)
 ax[1].set_xlabel('theta')
 ax[1].set_ylabel('Change in spoke tension [N]')
+
+ax[0].set_title('Effect of a 500 N radial load')
 
 plt.tight_layout()
 plt.show()
