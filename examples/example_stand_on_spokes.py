@@ -24,22 +24,30 @@ K = mm.K_rim(tension=False) + mm.K_spk(smeared_spokes=True, tension=False)
 # Solve for the mode coefficients
 dm = np.linalg.solve(K, F_ext)
 
-# Calculate the rotational stiffness
 # Get radial deflection
 theta = np.linspace(-np.pi, np.pi, 100)
 rad_def = mm.rim_def_rad(theta, dm)
 
+# Calculate change in spoke tensions
+dT = [-s.EA/s.length *
+      np.dot(s.n,
+             mm.B_theta(s.rim_pt[1], comps=[0, 1, 2]).dot(dm))
+      for s in wheel.spokes]
+
 
 # Draw deformed wheel
-f1 = plt.figure(1)
-plt.plot(theta, 1000.*rad_def)
+fig, ax = plt.subplots(nrows=2, figsize=(5, 5))
 
-plt.xlabel('theta')
-plt.ylabel('Radial deflection [mm]')
+ax[0].plot(theta, 1000.*rad_def)
+ax[0].set_xlim(-np.pi, np.pi)
+ax[0].set_xlabel('theta')
+ax[0].set_ylabel('Radial deflection [mm]')
 
-# f2 = plt.figure(2)
-# soln.plot_spoke_tension(fig=f2)
-# f2.gca().set_yticklabels([])
+ax[1].bar(np.arange(-np.pi, np.pi, 2*np.pi/36), np.roll(dT, 18),
+		  width=1.5*np.pi/36)
+ax[1].set_xlim(-np.pi, np.pi)
+ax[1].set_xlabel('theta')
+ax[1].set_ylabel('Change in spoke tension [N]')
 
 plt.tight_layout()
 plt.show()
