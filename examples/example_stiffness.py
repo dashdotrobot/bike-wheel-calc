@@ -70,8 +70,8 @@ for i, w in enumerate(wheels):
 
     # Create rim
     w.rim = Rim(radius=0.3, area=100e-6,
-                    I_lat=200./69e9, I_rad=100./69e9, J_tor=25./26e9, I_warp=0.0,
-                    young_mod=69e9, shear_mod=26e9)
+                I_lat=200./69e9, I_rad=100./69e9, J_tor=25./26e9, I_warp=0.0,
+                young_mod=69e9, shear_mod=26e9)
 
     # Generate spoking pattern
     w.lace_cross(n_spokes=36, n_cross=i, diameter=2.0e-3, young_mod=210e9)

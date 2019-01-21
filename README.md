@@ -28,11 +28,9 @@ pip install .
 
 ## Usage
 
-To perform a typical computation, you should (1) define the wheel properties, (2) define the spoke and rim material properties, (3) add constraints ("clamp" or "fix" the wheel at some points), (4) add forces or torques, and finally, (5) solve!
+### The `BicycleWheel` class
 
-### 1 Defining wheel geometry and material properties
-
-A BicycleWheel objects defines the geometry, material properties, and spoke arrangement of the wheel. First, create an empty wheel object:
+The BicycleWheel objects defines the geometry, material properties, and spoke arrangement of the wheel. First, create an empty wheel object:
 
 ```python
 wheel = BicycleWheel()
@@ -41,25 +39,25 @@ wheel = BicycleWheel()
 Next, define the hub using the subclass Hub:
 
 ```python
-wheel.hub = wheel.Hub(diam1=0.04, width1=0.03)
+wheel.hub = wheel.Hub(diameter=0.040, width=0.050)
 ```
 
-You can specify a different flange diameter and width for the non-drive side by specifying the optional diam2 and width2 keywords. All dimensions are in meters (30 millimeters = 0.03 meters).
+This creates a hub with a flange diameter of 40 mm and a total width of 50 mm (flange to flange). Optionally, you can specify `diameter_ds`, `diameter_nds`, `width_ds`, and `width_nds`. to create a hub with different flange diameters and/or rim dish.
 
-Next, define the rim using one of the available constructors. The most general constructor is the general() constructor."
+Next, define the rim.
 
 ```python
-wheel.rim = wheel.Rim.general(radius=0.3,
-                              area=82.0e-6,
-                              I11=5620e-12,
-                              I22=1187e-12,
-                              I33=1124e-12,
-                              Iw=0.0,
-                              young_mod=69.0e9,
-                              shear_mod=26.0e9)
+wheel.rim = Rim.general(radius=0.3,        # [m] radius at the beam axis
+                        area=100.0e-6,     # [m^2] cross-sectional area of the rim
+                        I_lat=1500e-12,    # [m^4] Second moment of area for lateral bending
+                        I_rad=3000e-12,    # [m^4] Second moment of area for radial bending
+                        J_tor=500e-12,     # [m^4] Torsion constant
+                        Iw=0.0,            # [m^6] Warping constant
+                        young_mod=69.0e9,  # [N/m^2] Young's modulus
+                        shear_mod=26.0e9)  # [N/m^2] Shear modulus
 ```
 
-`radius` is the radius of the rim centroid (the geometric center of the rim cross-section), `area` is the cross-sectional area, `I11` is the [torsion constant](https://en.wikipedia.org/wiki/Torsion_constant), `I22` is the [second moment of area](https://en.wikipedia.org/wiki/Second_moment_of_area) for out-of-plane bending, `I33` is the second moment of area for in-plane bending, `Iw` is the warping constant (set to zero if you are unsure), `young_mod` is the rim material [Young's Modulus](http://en.wikipedia.org/wiki/Young%27s_modulus), and `shear_mod` is the rim material [Shear Modulus](http://en.wikipedia.org/wiki/Shear_modulus).
+The [torsion constant](https://en.wikipedia.org/wiki/Torsion_constant), and [second moments of area](https://en.wikipedia.org/wiki/Second_moment_of_area) are geometric properties of the rim cross-section that determine its stiffness. `Iw` is the warping constant (set to zero if you are unsure), `young_mod` is the rim material [Young's Modulus](http://en.wikipedia.org/wiki/Young%27s_modulus), and `shear_mod` is the rim material [Shear Modulus](http://en.wikipedia.org/wiki/Shear_modulus).
 
 Next, create spokes by either using a predefined spoke configuration:
 
@@ -78,6 +76,15 @@ wheel.spokes.append(wheel.Spoke(rim_pt, hub_pt, diameter=d, young_mod=210e9))
 ```
 
 The first two arguments are tuples defining the position of the spoke nipple and hub eyelet, respectively, in polar coordinates (R, theta, z). The spoke nipple does not need to lie on the rim centroid line. For example, a "fat-bike" wheel typically has spoke nipples which are offset from the centerline of the rim to provide torsional stability to the rim.
+
+(Optional) Finally, apply spoke tension
+
+```python
+wheel.apply_tension(800.)  # Apply 800 Newtons average radial tension.
+```
+
+
+
 
 ### 2 Create BicycleWheelFEM object (finite-element solver)
 
