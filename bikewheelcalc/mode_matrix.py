@@ -204,10 +204,10 @@ class ModeMatrix:
 
         return K_spk
 
-    def F_ext(self, f_theta, f):
+    def F_ext(self, theta, f):
         'Calculate external force vector.'
 
-        Bi = self.B_theta(f_theta).T
+        Bi = self.B_theta(theta).T
         F_ext = Bi.dot(np.array(f).reshape((4, 1)))
 
         return F_ext.flatten()
@@ -236,6 +236,22 @@ class ModeMatrix:
         ix = self.get_ix_uncoupled(dim=dim)
 
         return K[np.ix_(ix, ix)]
+
+    def rim_def_lat(self, theta, dm):
+        'Calculate lateral rim deflection at the location(s) specified by theta'
+        return self.B_theta(theta, 0).dot(dm)
+
+    def rim_def_rad(self, theta, dm):
+        'Calculate radial rim deflection at the location(s) specified by theta.'
+        return self.B_theta(theta, 1).dot(dm)
+
+    def rim_def_tan(self, theta, dm):
+        'Calculate tangential rim deflection at the location(s) specified by theta.'
+        return self.B_theta(theta, 2).dot(dm)
+
+    def rim_def_rot(self, theta, dm):
+        'Calculate rim cross-section rotation at the location(s) specified by theta.'
+        return self.B_theta(theta, 3).dot(dm)
 
     def __init__(self, wheel, N=10):
 

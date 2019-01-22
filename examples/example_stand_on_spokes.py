@@ -1,44 +1,54 @@
-import bikewheelcalc as bc
+from bikewheelcalc import BicycleWheel, Rim, Hub, ModeMatrix
 import matplotlib.pyplot as plt
+import numpy as np
 
 
-# Create an example wheel
-wheel = bc.BicycleWheel()
-wheel.hub = bc.Hub(diam1=0.04, width1=0.03)
-wheel.rim = bc.Rim.general(radius=0.3,
-                           area=82.0e-6,
-                           I11=5620e-12,
-                           I22=1187e-12,
-                           I33=1124e-12,
-                           Iw=0.0,
-                           young_mod=69.0e9,
-                           shear_mod=26.0e9)
+# Create an example wheel and rim
+wheel = BicycleWheel()
+wheel.hub = Hub(width=0.05, diameter=0.05)
+wheel.rim = Rim(radius=0.3, area=100e-6,
+                I_lat=200./69e9, I_rad=100./69e9, J_tor=25./26e9, I_warp=0.0,
+                young_mod=69e9, shear_mod=26e9)
+wheel.lace_cross(n_spokes=36, n_cross=3, diameter=2.0e-3, young_mod=210e9)
 
-wheel.lace_cross(n_spokes=36, n_cross=3, diameter=2.0e-3,
-                 young_mod=210e9, offset=0.0)
 
-# Create finite-element model from wheel
-fem = bc.BicycleWheelFEM(wheel, verbose=True)
+# Create a ModeMatrix model with 24 modes
+mm = ModeMatrix(wheel, N=24)
 
-# Create a rigid body for the hub nodes and constrain it
-R1 = bc.RigidBody('hub', [0, 0, 0], fem.get_hub_nodes())
-fem.add_rigid_body(R1)
-fem.add_constraint(R1.node_id, range(6))
+# Create a 500 Newton pointing radially inwards at theta=0
+F_ext = mm.F_ext(0., np.array([0., 500., 0., 0.]))
 
-# Add an upward force, distributed over bottom 3 nodes
-fem.add_force(0, 1, 500)
-fem.add_force(1, 1, 250)
-fem.add_force(35, 1, 250)
+# Calculate stiffness matrix
+K = mm.K_rim(tension=False) + mm.K_spk(smeared_spokes=False, tension=False)
 
-soln = fem.solve(pretension=1000)
+# Solve for the mode coefficients
+dm = np.linalg.solve(K, F_ext)
 
-# Draw deformed wheel
-f1 = plt.figure(1)
-f_def = soln.plot_deformed_wheel(rel_scale=0.1)
-plt.axis('off')
+# Get radial deflection
+theta = np.linspace(-np.pi, np.pi, 100)
+rad_def = mm.rim_def_rad(theta, dm)
 
-f2 = plt.figure(2)
-soln.plot_spoke_tension(fig=f2)
-f2.gca().set_yticklabels([])
+# Calculate change in spoke tensions
+dT = [-s.EA/s.length *
+      np.dot(s.n,
+             mm.B_theta(s.rim_pt[1], comps=[0, 1, 2]).dot(dm))
+      for s in wheel.spokes]
 
+
+# Plot radial deformation and tension change
+fig, ax = plt.subplots(nrows=2, figsize=(5, 5))
+
+ax[0].plot(theta, 1000.*rad_def)
+ax[0].set_xlim(-np.pi, np.pi)
+ax[0].set_ylabel('Radial deflection [mm]')
+
+ax[1].bar(np.arange(-np.pi, np.pi, 2*np.pi/36), np.roll(dT, 18),
+		  width=1.5*np.pi/36)
+ax[1].set_xlim(-np.pi, np.pi)
+ax[1].set_xlabel('theta')
+ax[1].set_ylabel('Change in spoke tension [N]')
+
+ax[0].set_title('Effect of a 500 N radial load')
+
+plt.tight_layout()
 plt.show()
