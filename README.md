@@ -47,14 +47,14 @@ This creates a hub with a flange diameter of 40 mm and a total width of 50 mm (f
 Next, define the rim.
 
 ```python
-wheel.rim = Rim.general(radius=0.3,        # [m] radius at the beam axis
-                        area=100.0e-6,     # [m^2] cross-sectional area of the rim
-                        I_lat=1500e-12,    # [m^4] Second moment of area for lateral bending
-                        I_rad=3000e-12,    # [m^4] Second moment of area for radial bending
-                        J_tor=500e-12,     # [m^4] Torsion constant
-                        Iw=0.0,            # [m^6] Warping constant
-                        young_mod=69.0e9,  # [N/m^2] Young's modulus
-                        shear_mod=26.0e9)  # [N/m^2] Shear modulus
+wheel.rim = Rim(radius=0.3,        # [m] radius at the beam axis
+                area=100.0e-6,     # [m^2] cross-sectional area of the rim
+                I_lat=1500e-12,    # [m^4] Second moment of area for lateral bending
+                I_rad=3000e-12,    # [m^4] Second moment of area for radial bending
+                J_tor=500e-12,     # [m^4] Torsion constant
+                Iw=0.0,            # [m^6] Warping constant
+                young_mod=69.0e9,  # [N/m^2] Young's modulus
+                shear_mod=26.0e9)  # [N/m^2] Shear modulus
 ```
 
 The [torsion constant](https://en.wikipedia.org/wiki/Torsion_constant), and [second moments of area](https://en.wikipedia.org/wiki/Second_moment_of_area) are geometric properties of the rim cross-section that determine its stiffness. `Iw` is the warping constant (set to zero if you are unsure), `young_mod` is the rim material [Young's Modulus](http://en.wikipedia.org/wiki/Young%27s_modulus), and `shear_mod` is the rim material [Shear Modulus](http://en.wikipedia.org/wiki/Shear_modulus).
