@@ -204,10 +204,10 @@ class ModeMatrix:
 
         return K_spk
 
-    def F_ext(self, f_theta, f):
+    def F_ext(self, theta, f):
         'Calculate external force vector.'
 
-        Bi = self.B_theta(f_theta).T
+        Bi = self.B_theta(theta).T
         F_ext = Bi.dot(np.array(f).reshape((4, 1)))
 
         return F_ext.flatten()

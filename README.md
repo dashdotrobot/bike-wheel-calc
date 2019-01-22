@@ -70,8 +70,7 @@ or by defining spokes manually:
 ```python
 rim_pt = (r_rim, theta_rim, z_rim)
 hub_pt = (r_hub, theta_hub, z_hub)
-d = 2.0e-3
-wheel.spokes.append(wheel.Spoke(rim_pt, hub_pt, diameter=d, young_mod=210e9))
+wheel.spokes.append(wheel.Spoke(rim_pt, hub_pt, diameter=2.0e-3, young_mod=210e9))
 ...
 ```
 
@@ -83,109 +82,68 @@ The first two arguments are tuples defining the position of the spoke nipple and
 wheel.apply_tension(800.)  # Apply 800 Newtons average radial tension.
 ```
 
+### 2 Create a ModeMatrix object
 
+The ModeMatrix class contains the methods and objects to implement the the Mode Matrix method for stress analysis of the wheel, developed by Matthew Ford in his Ph.D. thesis [[1]](#references). In this method, the deformations functions are approximated by sine and cosine functions, e.g.
 
-
-### 2 Create BicycleWheelFEM object (finite-element solver)
-
-The BicycleWheelFEM object represents the model that you are solving, including the nodes (points) and elements (spokes and rim segments), and the constraints and forces (boundary conditions).
-
-```python
-fem = BicycleWheelFEM(wheel)
+```
+u(t) = u_0 + SUM(u_n_c*cos(n*theta) + u_n_s*sin(n*theta))
 ```
 
-### 3 Add constraints
+where `n` goes from 1 to `N` in the `SUM`. The highest mode number `N` is chosen to achieve the desired precision. More modes requires more computational power, but results in a more precise solution.
 
-By default, the hub nodes aren't connected to anything, so before applying forces, you should probably attach them all together. Do this by defining a `RigidBody` object which contains all the hub nodes. The reason this isn't done by default is to allow you to simulate more complicated effects, like the torsional flexibility of the hub in transferring torque from the sprocket side to the left side).
+In the Mode Matrix method, we solve for the coefficients `u_0, u_1_c, u_1_s, u_2_c, u_2_s, ...`. If the highest mode is `N`, there are a total of `8N + 4` modes: That's one coefficient for each sine/cosine, each degree of freedom, and each mode = `2*4*N`, plus 4 coefficients for `u_0, v_0, w_0, phi_0` for the zero-mode.
 
-```python
-R_hub = RigidBody(name='hub', pos=[0, 0, 0], nodes=fem.get_hub_nodes())
-fem.add_rigid_body(R_hub)
-```
-
-You could also choose the nodes to constrain manually by entering a list of nodes IDs, e.g. `R_hub = RigidBody('name', pos=[0, 0, 0], nodes=[12, 13, 14, 22, 25, ...])`. The rigid body contains a special reference node at the position `pos` which you will use to add constraints or forces to the rigid body.
-
-Before you apply forces to the wheel, you need to add constraints to specify how it is held (you can't stretch a spring without holding the other side fixed).
-
-> **Degrees of Freedom.** Each node in the model has [6 degrees of freedom](http://en.wikipedia.org/wiki/Degrees_of_freedom_%28mechanics%29#Six_degrees_of_freedom) (displacement along the x, y, and z axes, and rotation around the x, y, and z axes). So an un-connected set of _N_ nodes would have _6N_ degrees of freedom. However, the connections between nodes (rim segments or spokes) reduce the total degrees of freedom. A properly connected finite-element model only has _6_ degrees of freedom left, so in general you must constrain 6 degrees of freedom in order to solve the model. You can do this by constraining all 6 DOFs for a single node (for example, the hub reference node) or you can constrain the displacement DOFs for 3 separate nodes.
-
-Constrain a node using the BicycleWheelFEM object's `add_constraint()` function.
+Create a `ModeMatrix` object as follows:
 
 ```python
-# constrain the X and Y position of node 0.
-fem.add_constraint(0, [0, 1])
-
-# constrain the X, Y, and Z position, and rotation around Z of nodes 0 through 5
-fem.add_constraint(range(6), [0, 1, 2, 5])
-
-# set the x-displacement of node 5 to 1 mm
-fem.add_constraint(5, 0, 0.001)
-
-# constrain all DOFs of the hub reference node
-fem.add_constraint(R_hub.node_id, range(6))
+mm = ModeMatrix(wheel, N=24)
 ```
 
-Note that if the third argument is omitted, the DOF will be fixed at zero (i.e. no movement or rotation). The units for displacement DOFs is meters and the units for rotational DOFs is [radians](http://en.wikipedia.org/wiki/Radian).
+### 3 Compute the mode stiffness matrix with the desired approximations
 
-If your model is not properly constrained, the solver may not be able to find a valid solution.
+The mode stiffness matrix is composed of two parts: the rim stiffness matrix and the spoke stiffness matrix:
+
+```python
+K = (mm.K_rim(tension=True, r0=True) +
+     mm.K_spk(tension=True, smeared_spokes=True)
+```
+
+The option `tension=True` on the rim stiffness matrix takes into account the effect of spoke tension and the compressive stress in the rim on lateral stiffness. The option `tension=True` on the spoke stiffness matrix takes into account the stiffening effect of tension on the spoke system lateral stiffness. The option `smeared_spokes=True` indicates that the wheel should be treated as if it had infinite spokes, smeared out into an effective "disc" with the same average stiffness as the original spokes. Choose `smeared_spokes=False` to get all the effects of discrete spokes.
 
 ### 4 Add forces or torques
 
-A fully constrained model will produce a solution, but the solution may not be very interesting unless you add _forces and torques_. These forces might, for example, represent the upward force from the ground, the torque applied by the sprocket or a disc brake, or lateral forces during cornering.
-
-> Forces and torques can only be applied to nodes. If you want to apply a force to a point on the rim in between two spokes, simply create a spoke nipple there using the `geom.add_nipple()` function, but don't connect a spoke to that point.
-
-The numbering scheme for forces follows the numbering scheme for constraint DOFs: [0, 1, 2] are the forces along the x, y, and z directions, and [3, 4, 5] are the torques about the x, y, and z axes.
+Apply forces and torques by creating a `F_ext` object for each force, and adding together as many forces as desired.
 
 ```python
-# apply an upward force of 100 N to the bottom-most node
-fem.add_force(0, 0, 100)
+# 120 Newton lateral force and 500 Newton radial force from the road
+F_contact = mm.F_ext(theta=0., f=[120., 500., 0., 0.])
 
-# apply a torque of 50 N-m to the hub around the axle (z-axis)
-fem.add_force(R_hub.node_id, 5, 50)
+# Pair of forces from rim braking
+F_brake_1 = mm.F_ext(theta=0., f=[0., 0., -100., 0.])     # Tangential force at the road
+F_brake_2 = mm.F_ext(theta=3.1415, f=[0., 0., 100., 0.])  # Tangential force at the rim brakes
+
+F = F_contact + F_brake_1 + F_brake_2
 ```
 
-**Note** that you can add a force to a node which has been constrained, so long as the force is applied to a degree of freedom which has not been constrained.
+In this scenario, we have a created a radial and lateral force at the road contact point (theta=0), and a pair of forces representing a rim brakig scenario: -100 Newtons at the road contact point and 100 Newtons at the brake pads (theta=pi)
 
-```python
-# Hold the position of the hub fixed, but apply a twisting torque of 50 N-m
-fem.add_constraint(R_hub.node_id, [0 1 2])
-fem.add_force(R_hub.node_id, 5, 50)
-```
+> Note, you can also add a torque to the rim (say, if one flange of the rim is loaded) by specifying `f=[0., 0., 0., T]`.
 
 ### 5 Solve and extract results
 
-Once you have created your model and added constraints and forces, solving the equations is very straightforward.
+The stiffness matrix `K`, force vector `F` and mode coefficient vector `d` satisfy the matrix equation
 
-```python
-solution = fem.solve()
+```
+K.dot(d) = F
 ```
 
-The `solution` object is an instance of the class `FEMSolution` which contains all the numerical results. It also has a simple function to plot the deformed (exaggerated) shape of the wheel. The nodal displacements and rotations can be extracted from an (N x 6)-dimensional array, where N is the number of nodes.
+Solve for the mode coefficients `d` using
 
-```python
-# Get the x-displacement of node 12
-x_disp_12 = solution.nodal_disp[12][0]
-
-# Get the rotation of the hub around the axle (z-axis)
-hub_rot = solution.nodal_disp[R_hub.node_id][5]
-
-# Get the total (vector) displacement of node 4
-d_4 = solution.nodal_disp[4][0:3]
+```
+d = numpy.linalg.solve(K, F)
 ```
 
-Each constrained node has a reaction force (or torque) associated with it. The reaction force is the force that would have to be applied to the node in order to keep it in the desired position. Reaction forces are only defined for degrees of freedom which have been constrained. The shape of the `nodal_rxn` array is the same size and shape as the `nodal_disp` array, but all the entries corresponding to unconstrained DOFs will be zero.
+## References
 
-> **Note** An applied force can produce both a reaction force and a reaction torque. Imagine you are holding a fishing rod. When a fish grabs the line, you have to apply a force (pulling the fish towards you), but at the same time you have to apply a torque to keep the rod from twisting out of your hands.
-
-## Contents
-
-* LICENSE - MIT license
-* README.md - this file
-* example_"".py - Example scripts
-* bikewheelcalc/
- * bicyclewheel.py - BicycleWheel class. Basic wheel and properties definition.
- * bikewheelfem.py - BicycleWheelFEM class. Core finite-element solver routines
- * femsolution.py - FEMSolution class. Result database and post-processing / visualization methods.
- * helpers.py - utility methods
- * rigidbody.py - RigidBody class. A rigid body object constrains multiple nodes to move rigidly.
+[1] Matthew Ford, [Reinventing the Wheel: Stress Analysis, Stability, and Optimization of the Bicycle Wheel](https://github.com/dashdotrobot/phd-thesis/releases/download/v1.0/Ford_BicycleWheelThesis_v1.0.pdf), Ph.D. Thesis, Northwestern University (2018)
