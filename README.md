@@ -144,6 +144,21 @@ Solve for the mode coefficients `d` using
 d = numpy.linalg.solve(K, F)
 ```
 
+Once you have `d`, evaluate the rim displacement at arbitrary points using
+
+```python
+lat_disp = mm.rim_def_lat(theta, d)
+rad_disp = mm.rim_def_rad(theta, d)
+```
+
+`theta` is a 1-D numpy array of locations along the rim.
+
+## Coordinate System
+
+Forces and displacements are specified in terms of three degrees of freedom: lateral: `u`, radial: `v`, and tangential: `w`, and a twist angle of the rim about its own axis: `phi`. The positive __radial__ direction points inwards towards the center of the hub. The positive __lateral__ direction points towards the non-drive side (NDS) of the bike. The positive __tangential__ direction points along the rim in the counter-clockwise direction (forwards, at the road contact point). Positive rim __twist__ is defined as a right-handed rotation around the tangential direction (imagine pointing your thumb along the tangential direction, and curling your fingers: that's the direction of positive rim twist).
+
+If the `lace_cross()` method is used, the bottom-most spoke is a __non-drive-side leading (pushing) spoke__. The spokes alternate NDS, DS, NDS, ... and leading, leading, trailing, trailing...
+
 ## References
 
 [1] Matthew Ford, [Reinventing the Wheel: Stress Analysis, Stability, and Optimization of the Bicycle Wheel](https://github.com/dashdotrobot/phd-thesis/releases/download/v1.0/Ford_BicycleWheelThesis_v1.0.pdf), Ph.D. Thesis, Northwestern University (2018)
