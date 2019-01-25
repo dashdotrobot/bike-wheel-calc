@@ -99,3 +99,17 @@ def test_K_lat(std_ncross):
     K_lat_mm = 1. / mm.B_theta(0.)[:, ix_uc].dot(d)[0]
 
     assert np.allclose(K_lat_mode, K_lat_mm)
+
+def test_A_adj(std_ncross):
+    'Check properties of the spoke adjustment matrix'
+
+    w = std_ncross(3)
+    mm = ModeMatrix(w, N=10)
+
+    A = mm.A_adj()
+
+    # Spoke adjustment has the same effect as a force applied along the spoke vector
+    i = 5  # Chose an arbitrary spoke
+    assert np.allclose(mm.A_adj()[:, i],
+                       mm.F_ext(theta=w.spokes[i].rim_pt[1], 
+                                f=np.append(w.spokes[i].n, 0.)))

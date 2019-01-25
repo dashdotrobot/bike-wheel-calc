@@ -212,6 +212,21 @@ class ModeMatrix:
 
         return F_ext.flatten()
 
+    def A_adj(self):
+        'Calculate spoke adjustment matrix.'
+
+        e3 = np.array([0., 0., 1.])  # rim axial vector
+
+        A = np.zeros((4 + self.n_modes*8, len(self.wheel.spokes)))
+
+        for i, s in enumerate(self.wheel.spokes):
+            b = np.array([s.rim_pt[2], 0., 0.])
+            A[:, i] = self.B_theta(s.rim_pt[1]).T\
+                .dot(np.append(s.n, e3.dot(np.cross(s.b, s.n))))
+
+        return A
+
+
     def get_ix_uncoupled(self, dim='lateral'):
         'Get indices for either lateral/torsional or radial/tangential modes.'
 

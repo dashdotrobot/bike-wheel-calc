@@ -175,11 +175,6 @@ class Spoke:
         n = self.n                   # spoke vector
         e3 = np.array([0., 0., 1.])  # rim axial vector
 
-        # Spoke nipple offset vector (relative to shear center)
-        # TODO: Correctly calculate v-component of b_s based on rim radius.
-        #       Set to zero for now.
-        b = np.array([self.rim_pt[2], 0., 0.])
-
         K_e = self.EA / self.length
 
         if tension:
@@ -190,10 +185,10 @@ class Spoke:
         k_f = K_e*np.outer(n, n) + K_t*(np.eye(3) - np.outer(n, n))
 
         # Change in force applied by spoke due to rim rotation, phi
-        dFdphi = k_f.dot(np.cross(e3, b).reshape((3, 1)))
+        dFdphi = k_f.dot(np.cross(e3, self.b).reshape((3, 1)))
 
         # Change in torque applied by spoke due to rim rotation
-        dTdphi = np.cross(b, e3).dot(k_f).dot(np.cross(b, e3))
+        dTdphi = np.cross(self.b, e3).dot(k_f).dot(np.cross(self.b, e3))
 
         k = np.zeros((4, 4))
 
@@ -210,18 +205,13 @@ class Spoke:
         n = self.n
         e3 = np.array([0., 0., 1.])
 
-        # Spoke nipple offset vector (relative to shear center)
-        # TODO: Correctly calculate v-component of b_s based on rim radius.
-        #       Set to zero for now.
-        b = np.array([self.rim_pt[2], 0., 0.])
-
         k_f = (1./self.length) * (np.eye(3) - np.outer(n, n))
 
         # Change in force applied by spoke due to rim rotation, phi
-        dFdphi = k_f.dot(np.cross(e3, b).reshape((3, 1)))
+        dFdphi = k_f.dot(np.cross(e3, self.b).reshape((3, 1)))
 
         # Change in torque applied by spoke due to rim rotation
-        dTdphi = np.cross(b, e3).dot(k_f).dot(np.cross(b, e3))
+        dTdphi = np.cross(self.b, e3).dot(k_f).dot(np.cross(self.b, e3))
 
         k = np.zeros((4, 4))
 
@@ -267,6 +257,11 @@ class Spoke:
 
         # Spoke axial unit vector
         self.n = np.array([du, dv, dw]) / self.length
+
+        # Spoke nipple offset vector (relative to shear center)
+        # TODO: Correctly calculate v-component of b_s based on rim radius.
+        #       Set to zero for now.
+        self.b = np.array([rim_pt[2], 0., 0.])
 
         # Approximate projected angles
         self.alpha = np.arctan(du / dv)
