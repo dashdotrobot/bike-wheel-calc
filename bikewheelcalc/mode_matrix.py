@@ -221,7 +221,7 @@ class ModeMatrix:
 
         for i, s in enumerate(self.wheel.spokes):
             b = np.array([s.rim_pt[2], 0., 0.])
-            A[:, i] = self.B_theta(s.rim_pt[1]).T\
+            A[:, i] = s.EA/s.length * self.B_theta(s.rim_pt[1]).T\
                 .dot(np.append(s.n, e3.dot(np.cross(s.b, s.n))))
 
         return A

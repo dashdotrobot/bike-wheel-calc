@@ -109,7 +109,7 @@ def test_A_adj(std_ncross):
     A = mm.A_adj()
 
     # Spoke adjustment has the same effect as a force applied along the spoke vector
-    i = 5  # Chose an arbitrary spoke
-    assert np.allclose(mm.A_adj()[:, i],
-                       mm.F_ext(theta=w.spokes[i].rim_pt[1], 
-                                f=np.append(w.spokes[i].n, 0.)))
+    s = w.spokes[5]  # Chose an arbitrary spoke
+    assert np.allclose(mm.A_adj()[:, 5],
+                       mm.F_ext(theta=s.rim_pt[1],
+                                f=s.EA/s.length * np.append(s.n, 0.)))
