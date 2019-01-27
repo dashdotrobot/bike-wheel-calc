@@ -42,6 +42,20 @@ def test_Tc_lin_quad(std_ncross):
 
     assert np.abs((Tc_lin[0] - Tc_quad[0]) / Tc_quad[0]) < 0.001
 
+def test_Tc_modemat_lin(std_ncross):
+    'Mode matrix method should give same result as linear.'
+
+    w = std_ncross(3)
+    Tc_ = calc_buckling_tension(w, approx='linear', N=20)
+
+    Tc_mm = calc_buckling_tension_modematrix(w,
+                                             smeared_spokes=True,
+                                             coupling=True,
+                                             r0=False,
+                                             N=4)
+
+    assert np.allclose(Tc_[0], Tc_mm)
+
 def test_Klat_uncoupled(std_ncross):
     'Check that calc_lat_stiff() and Eqn. (2.71) give same result'
 

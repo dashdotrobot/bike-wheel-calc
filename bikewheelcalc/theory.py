@@ -2,7 +2,7 @@
 
 import numpy as np
 from numpy import pi
-from scipy.optimize import minimize
+from scipy.linalg import eig
 from bikewheelcalc import BicycleWheel, ModeMatrix
 
 
@@ -64,10 +64,6 @@ def calc_buckling_tension(wheel, approx='linear', N=20):
         T_c = min(T_cn)
         n_c = T_cn.index(T_c) + 2
 
-    elif approx == 'modematrix':
-        T_c = calc_Tc_modematrix(smeared_spokes=True, coupling=False)
-        n_c = None
-
     elif approx == 'small_mu':
         T_c = 11.875 * GJ/(ns*R**2) * np.power(k_uu*R**4/GJ, 2.0/3.0)
         n_c = np.power(k_uu*R**4/(2*GJ), 1.0/6.0)
@@ -78,31 +74,21 @@ def calc_buckling_tension(wheel, approx='linear', N=20):
     return T_c, n_c
 
 
-def calc_buckling_tension_modematrix(smeared_spokes=True, coupling=True, r0=True):
+def calc_buckling_tension_modematrix(wheel, smeared_spokes=True, coupling=True, r0=True, N=24):
     'Estimate buckling tension from condition number of stiffness matrix.'
 
     mm = ModeMatrix(wheel, N=N)
 
-    def neg_cond(T):
-        wheel.apply_tension(T)
+    K_matl = (mm.K_rim_matl(r0=r0) +
+              mm.K_spk(tension=False, smeared_spokes=smeared_spokes))
 
-        K = (mm.K_rim(buckling=True, r0=r0) +
-             mm.K_spk(smeared_spokes=smeared_spokes))
+    K_geom = (mm.K_rim_geom(r0=r0) -
+              mm.K_spk_geom(smeared_spokes=smeared_spokes))
 
-        if not coupling:
-            K = mm.get_K_uncoupled(buckling=True,
-                                   smeared_spokes=smeared_spokes)
+    w, v = eig(K_matl, K_geom)
+    wr = np.real(w)
 
-        return -np.linalg.cond(K)
-
-    # Find approximate buckling tension from linear analytical solution
-    Tc_approx = calc_buckling_tension(wheel, approx='linear')
-
-    # Maximize the condition number as a function of tension
-    res = minimize(fun=neg_cond, x0=[Tc_approx], method='Nelder-Mead',
-                   options={'maxiter': 50})
-
-    return res.x[0]
+    return np.min(wr[wr > 0])
 
 
 def lat_mode_stiff(wheel, n, smeared_spokes=True, buckling=True, tension=True):
