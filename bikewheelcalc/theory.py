@@ -85,10 +85,11 @@ def calc_buckling_tension_modematrix(wheel, smeared_spokes=True, coupling=True, 
     K_geom = (mm.K_rim_geom(r0=r0) -
               mm.K_spk_geom(smeared_spokes=smeared_spokes))
 
+    # Solve generalized eigienvalue problem:
+    #   (K_matl + T*K_geom)
     w, v = eig(K_matl, K_geom)
-    wr = np.real(w)
 
-    return np.min(wr[wr > 0])
+    return np.min(np.real(w)[np.real(w) > 0])
 
 
 def lat_mode_stiff(wheel, n, smeared_spokes=True, buckling=True, tension=True):

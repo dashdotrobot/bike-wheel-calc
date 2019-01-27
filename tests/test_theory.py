@@ -52,7 +52,22 @@ def test_Tc_modemat_lin(std_ncross):
                                              smeared_spokes=True,
                                              coupling=True,
                                              r0=False,
-                                             N=4)
+                                             N=20)
+
+    assert np.allclose(Tc_[0], Tc_mm)
+
+def test_Tc_modemat_quad(std_ncross):
+    'Mode matrix method should give same result as quadratic.'
+
+    w = std_ncross(3)
+    w.rim.sec_params = {'y_0': 0.003}
+    Tc_ = calc_buckling_tension(w, approx='quadratic', N=20)
+
+    Tc_mm = calc_buckling_tension_modematrix(w,
+                                             smeared_spokes=True,
+                                             coupling=True,
+                                             r0=False,
+                                             N=20)
 
     assert np.allclose(Tc_[0], Tc_mm)
 
