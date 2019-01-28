@@ -241,6 +241,10 @@ class Spoke:
     def calc_tension_change(self, d, a=0.):
         'Calculate change in tension given d=(u,v,w,phi) and a tightening adjustment a'
 
+        # Assume phi=0 if not given
+        if len(d) < 4:
+            d = np.append(d, 0.)
+
         # u_n = u_s + phi(e_3 x b)
         e3 = np.array([0., 0., 1.])
         un = np.array([d[0], d[1], d[2]]) + d[3]*np.cross(e3, self.b)
