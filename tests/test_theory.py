@@ -60,16 +60,17 @@ def test_Tc_modemat_quad(std_ncross):
     'Mode matrix method should give same result as quadratic.'
 
     w = std_ncross(3)
-    w.rim.sec_params = {'y_0': 0.003}
-    Tc_ = calc_buckling_tension(w, approx='quadratic', N=20)
+    w.rim.sec_params = {'y_0': 0.005}
+    Tc_qd = calc_buckling_tension(w, approx='quadratic', N=6)
 
     Tc_mm = calc_buckling_tension_modematrix(w,
                                              smeared_spokes=True,
-                                             coupling=True,
+                                             coupling=False,
                                              r0=False,
-                                             N=20)
+                                             N=6)
 
-    assert np.allclose(Tc_[0], Tc_mm)
+    assert np.allclose(Tc_qd[0], Tc_mm)
+
 
 def test_Klat_uncoupled(std_ncross):
     'Check that calc_lat_stiff() and Eqn. (2.71) give same result'
