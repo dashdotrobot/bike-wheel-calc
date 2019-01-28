@@ -5,7 +5,7 @@ from bikewheelcalc import *
 
 
 # -----------------------------------------------------------------------------
-# Stiffness matrixtests
+# Stiffness matrix tests
 # -----------------------------------------------------------------------------
 
 def test_K_matl_geom(std_ncross):
@@ -100,6 +100,11 @@ def test_K_lat(std_ncross):
 
     assert np.allclose(K_lat_mode, K_lat_mm)
 
+
+# -----------------------------------------------------------------------------
+# Spoke adjustment tests
+# -----------------------------------------------------------------------------
+
 def test_A_adj(std_ncross):
     'Check properties of the spoke adjustment matrix'
 
@@ -113,3 +118,24 @@ def test_A_adj(std_ncross):
     assert np.allclose(mm.A_adj()[:, 5],
                        mm.F_ext(theta=s.rim_pt[1],
                                 f=s.EA/s.length * np.append(s.n, 0.)))
+
+def test_spoke_tension(std_ncross):
+    'Check that Spoke.calc_tension_change() and ModeMatrix.spoke_tension_change give same result.'
+
+    w = std_ncross(3)
+    mm = ModeMatrix(w, N=10)
+
+    # No deformation, only adjustment
+    dm = np.zeros(4 + 8*10)
+    a = np.zeros(len(w.spokes))
+    a[5] = 0.001
+
+    dT = mm.spoke_tension_change(dm, a)
+    dT_s = w.spokes[5].calc_tension_change([0., 0., 0., 0.], a[5])
+
+    # Check correct result for single spoke
+    assert np.allclose(dT[5], dT_s)
+
+    # Check all others are zero
+    assert np.allclose(dT[:5], 0.)
+    assert np.allclose(dT[6:], 0.)

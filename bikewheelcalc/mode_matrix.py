@@ -268,6 +268,17 @@ class ModeMatrix:
         'Calculate rim cross-section rotation at the location(s) specified by theta.'
         return self.B_theta(theta, 3).dot(dm)
 
+    def spoke_tension_change(self, dm, a=None):
+        'Return a vector of tension changes for each spoke.'
+
+        if a is None:
+            a = np.zeros(self.n_spokes)
+
+        dT = [s.calc_tension_change(self.B_theta(s.rim_pt[1]).dot(dm), adj)
+              for s, adj in zip(self.wheel.spokes, a)]
+
+        return np.array(dT)
+
     def __init__(self, wheel, N=10):
 
         self.wheel = wheel
