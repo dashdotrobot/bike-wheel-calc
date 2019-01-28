@@ -18,11 +18,11 @@ def calc_buckling_tension(wheel, approx='linear', N=20):
         if 'y_0' in wheel.rim.sec_params:
             y0 = wheel.rim.sec_params['y_0']
 
-        A = (R**2*kT - n**2*R)*y0
+        A = -y0*R*(n**2 - R*kT)
 
-        B = (EI/R*(R*kT - n**2 - n**4*y0/R)
-             +CT*n**2/R*(R*kT - n**2 - y0/R*(2*n**2 - 1))
-             -R*kpp*(n**2 - R*kT) + 2*R*y0*kup*n**2 + R**2*kuu*y0)
+        B = (-EI/R*(n**2 + n**4*y0/R - R*kT)
+             -CT*n**2/R*(n**2 - R*kT + y0/R*(2*n**2 - 1))
+             -R*kpp*(n**2 - R*kT) + 2*R*y0*kup*n**2 + R**2*y0*kuu)
 
         C = (EI*CT*n**2/R**4*(n**2-1)**2
              +EI*(kuu + 2*kup/R*n**2 + kpp/R**2*n**4)
@@ -74,7 +74,7 @@ def calc_buckling_tension(wheel, approx='linear', N=20):
     return T_c, n_c
 
 
-def calc_buckling_tension_modematrix(wheel, smeared_spokes=True, coupling=True, r0=True, N=24):
+def calc_buckling_tension_modematrix(wheel, smeared_spokes=False, coupling=True, r0=True, N=24):
     'Estimate buckling tension from condition number of stiffness matrix.'
 
     mm = ModeMatrix(wheel, N=N)
@@ -87,7 +87,11 @@ def calc_buckling_tension_modematrix(wheel, smeared_spokes=True, coupling=True, 
 
     # Solve generalized eigienvalue problem:
     #   (K_matl + T*K_geom)
-    w, v = eig(K_matl, K_geom)
+    if coupling:
+        w, v = eig(K_matl, K_geom)
+    else:
+        w, v = eig(mm.get_K_uncoupled(K_matl),
+                   mm.get_K_uncoupled(K_geom))
 
     return np.min(np.real(w)[np.real(w) > 0])
 
