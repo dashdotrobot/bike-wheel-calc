@@ -138,7 +138,7 @@ class ModeMatrix:
 
         return len(w.spokes)/(2*pi*R) * K_rim_geom
 
-    def K_spk_geom(self, smeared_spokes=True):
+    def K_spk_geom(self, smeared_spokes=False):
         'Tension-dependent portion of K_spk, such that K_spk = K_spk_matl + T_avg*K_spk_geom'
 
         K_spk = np.zeros((4 + self.n_modes*8, 4 + self.n_modes*8))
@@ -179,7 +179,7 @@ class ModeMatrix:
 
         return K_rim
 
-    def K_spk(self, smeared_spokes=True, tension=True):
+    def K_spk(self, smeared_spokes=False, tension=True):
         'Calculate spoke mode stiffness matrix.'
 
         K_spk = np.zeros((4 + self.n_modes*8, 4 + self.n_modes*8))
