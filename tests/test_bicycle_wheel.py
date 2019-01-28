@@ -128,16 +128,16 @@ def test_calc_tension_change(std_ncross):
     s = w.spokes[5]  # random spoke number
 
     # Tighten spoke with fixed ends
-    dT = s.calc_tension_change([0., 0., 0., 0.], a=0.001)
+    dT = s.calc_tension_change([0., 0., 0., 1.], a=0.001)
     assert np.allclose(dT, s.EA/s.length*0.001)
 
     # Check tension change for 1% extension
-    dT = s.calc_tension_change(np.append(-0.01*s.length*s.n, 0.))
+    dT = s.calc_tension_change(-0.01*s.length*s.n)
     assert np.allclose(dT, 0.01*s.EA)
 
     # No tension change for displacement perpendicular to spoke vector
     u = 0.001*np.cross([0., 0., 1.], s.n)
-    dT = s.calc_tension_change(np.append(u, 0.))
+    dT = s.calc_tension_change(u)
     assert np.allclose(dT, 0.)
 
 
