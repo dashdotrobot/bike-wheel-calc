@@ -127,7 +127,7 @@ class ModeMatrix:
             K_rim_geom[i0+1, i0+1] = K_rim_geom[i0+0, i0+0]
 
             # k_up
-            K_rim_geom[i0+0, i0+6] = pi*n**2*(y0 - r02/R*n**2)
+            K_rim_geom[i0+0, i0+6] = pi*n**2*(y0 - r02/R)
             K_rim_geom[i0+6, i0+0] = K_rim_geom[i0+0, i0+6]
             K_rim_geom[i0+1, i0+7] = K_rim_geom[i0+0, i0+6]
             K_rim_geom[i0+7, i0+1] = K_rim_geom[i0+0, i0+6]

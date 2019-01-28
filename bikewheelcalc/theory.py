@@ -2,7 +2,7 @@
 
 import numpy as np
 from numpy import pi
-from scipy.optimize import minimize
+from scipy.linalg import eig
 from bikewheelcalc import BicycleWheel, ModeMatrix
 
 
@@ -18,11 +18,11 @@ def calc_buckling_tension(wheel, approx='linear', N=20):
         if 'y_0' in wheel.rim.sec_params:
             y0 = wheel.rim.sec_params['y_0']
 
-        A = (R**2*kT - n**2*R)*y0
+        A = -y0*R*(n**2 - R*kT)
 
-        B = (EI/R*(R*kT - n**2 - n**4*y0/R)
-             +CT*n**2/R*(R*kT - n**2 - y0/R*(2*n**2 - 1))
-             -R*kpp*(n**2 - R*kT) + 2*R*y0*kup*n**2 + R**2*kuu*y0)
+        B = (-EI/R*(n**2 + n**4*y0/R - R*kT)
+             -CT*n**2/R*(n**2 - R*kT + y0/R*(2*n**2 - 1))
+             -R*kpp*(n**2 - R*kT) + 2*R*y0*kup*n**2 + R**2*y0*kuu)
 
         C = (EI*CT*n**2/R**4*(n**2-1)**2
              +EI*(kuu + 2*kup/R*n**2 + kpp/R**2*n**4)
@@ -64,10 +64,6 @@ def calc_buckling_tension(wheel, approx='linear', N=20):
         T_c = min(T_cn)
         n_c = T_cn.index(T_c) + 2
 
-    elif approx == 'modematrix':
-        T_c = calc_Tc_modematrix(smeared_spokes=True, coupling=False)
-        n_c = None
-
     elif approx == 'small_mu':
         T_c = 11.875 * GJ/(ns*R**2) * np.power(k_uu*R**4/GJ, 2.0/3.0)
         n_c = np.power(k_uu*R**4/(2*GJ), 1.0/6.0)
@@ -78,31 +74,26 @@ def calc_buckling_tension(wheel, approx='linear', N=20):
     return T_c, n_c
 
 
-def calc_buckling_tension_modematrix(smeared_spokes=True, coupling=True, r0=True):
+def calc_buckling_tension_modematrix(wheel, smeared_spokes=False, coupling=True, r0=True, N=24):
     'Estimate buckling tension from condition number of stiffness matrix.'
 
     mm = ModeMatrix(wheel, N=N)
 
-    def neg_cond(T):
-        wheel.apply_tension(T)
+    K_matl = (mm.K_rim_matl(r0=r0) +
+              mm.K_spk(tension=False, smeared_spokes=smeared_spokes))
 
-        K = (mm.K_rim(buckling=True, r0=r0) +
-             mm.K_spk(smeared_spokes=smeared_spokes))
+    K_geom = (mm.K_rim_geom(r0=r0) -
+              mm.K_spk_geom(smeared_spokes=smeared_spokes))
 
-        if not coupling:
-            K = mm.get_K_uncoupled(buckling=True,
-                                   smeared_spokes=smeared_spokes)
+    # Solve generalized eigienvalue problem:
+    #   (K_matl + T*K_geom)
+    if coupling:
+        w, v = eig(K_matl, K_geom)
+    else:
+        w, v = eig(mm.get_K_uncoupled(K_matl),
+                   mm.get_K_uncoupled(K_geom))
 
-        return -np.linalg.cond(K)
-
-    # Find approximate buckling tension from linear analytical solution
-    Tc_approx = calc_buckling_tension(wheel, approx='linear')
-
-    # Maximize the condition number as a function of tension
-    res = minimize(fun=neg_cond, x0=[Tc_approx], method='Nelder-Mead',
-                   options={'maxiter': 50})
-
-    return res.x[0]
+    return np.min(np.real(w)[np.real(w) > 0])
 
 
 def lat_mode_stiff(wheel, n, smeared_spokes=True, buckling=True, tension=True):
