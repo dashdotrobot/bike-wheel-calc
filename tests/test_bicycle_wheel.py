@@ -38,7 +38,7 @@ def test_hub_asymm_offset():
 
 
 # -----------------------------------------------------------------------------
-# Spoke stiffness tests
+# Spoke tests
 # -----------------------------------------------------------------------------
 
 @pytest.mark.parametrize('n_cross', [0, 1, 2, 3])
@@ -121,9 +121,28 @@ def test_calc_kbar_offset_zero_eig(std_ncross, offset):
 
     assert np.allclose(np.min(w), 0.)
 
+def test_calc_tension_change(std_ncross):
+    'Check basic properties of Spoke.calc_tension_change()'
+
+    w = std_ncross(3)
+    s = w.spokes[5]  # random spoke number
+
+    # Tighten spoke with fixed ends
+    dT = s.calc_tension_change([0., 0., 0., 0.], a=0.001)
+    assert np.allclose(dT, s.EA/s.length*0.001)
+
+    # Check tension change for 1% extension
+    dT = s.calc_tension_change(np.append(-0.01*s.length*s.n, 0.))
+    assert np.allclose(dT, 0.01*s.EA)
+
+    # No tension change for displacement perpendicular to spoke vector
+    u = 0.001*np.cross([0., 0., 1.], s.n)
+    dT = s.calc_tension_change(np.append(u, 0.))
+    assert np.allclose(dT, 0.)
+
 
 # -----------------------------------------------------------------------------
-# Tension tests
+# Wheel tension tests
 # -----------------------------------------------------------------------------
 
 @pytest.mark.parametrize('n_cross', [0, 1, 2, 3])
