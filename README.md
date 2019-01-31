@@ -82,17 +82,44 @@ The first two arguments are tuples defining the position of the spoke nipple and
 wheel.apply_tension(800.)  # Apply 800 Newtons average radial tension.
 ```
 
-### 2 Create a ModeMatrix object
+### Calculating wheel deformation
 
-The ModeMatrix class contains the methods and objects to implement the the Mode Matrix method for stress analysis of the wheel, developed by Matthew Ford in his Ph.D. thesis [[1]](#references). In this method, the deformations functions are approximated by sine and cosine functions, e.g.
+The Mode Matrix Method, described in [[1]](#references), is a numerical technique for solving the equations of motion of the wheel to arbitrary precision. In this method, the deformations functions are approximated by sine and cosine functions, e.g.
 
 ```
 u(t) = u_0 + SUM(u_n_c*cos(n*theta) + u_n_s*sin(n*theta))
+v(t) = v_0 + SUM(v_n_c*cos(n*theta) + v_n_s*sin(n*theta))
+w(t) = ...
+phi(t) = ...
 ```
 
-where `n` goes from 1 to `N` in the `SUM`. The highest mode number `N` is chosen to achieve the desired precision. More modes requires more computational power, but results in a more precise solution.
+where `n` goes from 1 to `N` in the `SUM`. `u,v,w,phi` are the lateral, radial, and tangential displacements and twist angle of the rim, respectively. The highest mode number `N` is chosen to achieve the desired precision. More modes requires more computational power, but results in a more precise solution.
 
 In the Mode Matrix method, we solve for the coefficients `u_0, u_1_c, u_1_s, u_2_c, u_2_s, ...`. If the highest mode is `N`, there are a total of `8N + 4` modes: That's one coefficient for each sine/cosine, each degree of freedom, and each mode = `2*4*N`, plus 4 coefficients for `u_0, v_0, w_0, phi_0` for the zero-mode.
+
+The governing matrix equation of the wheel is
+
+```
+(K_rim + K_spk)*d = F_ext + A_adj*a
+```
+
+where `K_rim + K_spk` is the wheel modal stiffness matrix, `d` is the vector of mode coefficients `u_0, u_1_c, ...`, `F_ext` is the modal external force vector, `A_adj` is the spoke adjustment matrix, and `a` is the vector of spoke adjustments (change in length due to spoke nipple rotation only).
+
+The real displacements are related to the mode coefficient vector `d` by a linear transformation given by:
+
+```
+u = B_u * d
+v = B_v * d
+...
+```
+
+The `B` matrix is calculated by the method `B_theta(theta, components)` of the `ModeMatrix` object.
+
+The steps to solving a basic stress-analysis problem are as follows:
+
+#### 1 Create a ModeMatrix object
+
+The ModeMatrix class contains the methods and objects to implement the the Mode Matrix method for stress analysis of the wheel, developed by Matthew Ford in his Ph.D. thesis [[1]](#references). 
 
 Create a `ModeMatrix` object as follows:
 
@@ -100,7 +127,7 @@ Create a `ModeMatrix` object as follows:
 mm = ModeMatrix(wheel, N=24)
 ```
 
-### 3 Compute the mode stiffness matrix with the desired approximations
+### 2 Compute the mode stiffness matrix with the desired approximations
 
 The mode stiffness matrix is composed of two parts: the rim stiffness matrix and the spoke stiffness matrix:
 
@@ -111,7 +138,7 @@ K = (mm.K_rim(tension=True, r0=True) +
 
 The option `tension=True` on the rim stiffness matrix takes into account the effect of spoke tension and the compressive stress in the rim on lateral stiffness. The option `tension=True` on the spoke stiffness matrix takes into account the stiffening effect of tension on the spoke system lateral stiffness. The option `smeared_spokes=True` indicates that the wheel should be treated as if it had infinite spokes, smeared out into an effective "disc" with the same average stiffness as the original spokes. Choose `smeared_spokes=False` to get all the effects of discrete spokes.
 
-### 4 Add forces or torques
+### 3 Add forces or torques
 
 Apply forces and torques by creating a `F_ext` object for each force, and adding together as many forces as desired.
 
@@ -130,15 +157,9 @@ In this scenario, we have a created a radial and lateral force at the road conta
 
 > Note, you can also add a torque to the rim (say, if one flange of the rim is loaded) by specifying `f=[0., 0., 0., T]`.
 
-### 5 Solve and extract results
+### 4 Solve and extract results
 
-The stiffness matrix `K`, force vector `F` and mode coefficient vector `d` satisfy the matrix equation
-
-```
-K.dot(d) = F
-```
-
-Solve for the mode coefficients `d` using
+Solve the governing equation for the mode coefficients `d` using
 
 ```
 d = numpy.linalg.solve(K, F)

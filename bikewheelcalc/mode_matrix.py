@@ -138,7 +138,7 @@ class ModeMatrix:
 
         return len(w.spokes)/(2*pi*R) * K_rim_geom
 
-    def K_spk_geom(self, smeared_spokes=True):
+    def K_spk_geom(self, smeared_spokes=False):
         'Tension-dependent portion of K_spk, such that K_spk = K_spk_matl + T_avg*K_spk_geom'
 
         K_spk = np.zeros((4 + self.n_modes*8, 4 + self.n_modes*8))
@@ -179,7 +179,7 @@ class ModeMatrix:
 
         return K_rim
 
-    def K_spk(self, smeared_spokes=True, tension=True):
+    def K_spk(self, smeared_spokes=False, tension=True):
         'Calculate spoke mode stiffness matrix.'
 
         K_spk = np.zeros((4 + self.n_modes*8, 4 + self.n_modes*8))
@@ -211,6 +211,21 @@ class ModeMatrix:
         F_ext = Bi.dot(np.array(f).reshape((4, 1)))
 
         return F_ext.flatten()
+
+    def A_adj(self):
+        'Calculate spoke adjustment matrix.'
+
+        e3 = np.array([0., 0., 1.])  # rim axial vector
+
+        A = np.zeros((4 + self.n_modes*8, len(self.wheel.spokes)))
+
+        for i, s in enumerate(self.wheel.spokes):
+            b = np.array([s.rim_pt[2], 0., 0.])
+            A[:, i] = s.EA/s.length * self.B_theta(s.rim_pt[1]).T\
+                .dot(np.append(s.n, e3.dot(np.cross(s.b, s.n))))
+
+        return A
+
 
     def get_ix_uncoupled(self, dim='lateral'):
         'Get indices for either lateral/torsional or radial/tangential modes.'
@@ -252,6 +267,17 @@ class ModeMatrix:
     def rim_def_rot(self, theta, dm):
         'Calculate rim cross-section rotation at the location(s) specified by theta.'
         return self.B_theta(theta, 3).dot(dm)
+
+    def spoke_tension_change(self, dm, a=None):
+        'Return a vector of tension changes for each spoke.'
+
+        if a is None:
+            a = np.zeros(self.n_spokes)
+
+        dT = [s.calc_tension_change(self.B_theta(s.rim_pt[1]).dot(dm), adj)
+              for s, adj in zip(self.wheel.spokes, a)]
+
+        return np.array(dT)
 
     def __init__(self, wheel, N=10):
 

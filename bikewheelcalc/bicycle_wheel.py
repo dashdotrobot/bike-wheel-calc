@@ -175,11 +175,6 @@ class Spoke:
         n = self.n                   # spoke vector
         e3 = np.array([0., 0., 1.])  # rim axial vector
 
-        # Spoke nipple offset vector (relative to shear center)
-        # TODO: Correctly calculate v-component of b_s based on rim radius.
-        #       Set to zero for now.
-        b = np.array([self.rim_pt[2], 0., 0.])
-
         K_e = self.EA / self.length
 
         if tension:
@@ -190,10 +185,10 @@ class Spoke:
         k_f = K_e*np.outer(n, n) + K_t*(np.eye(3) - np.outer(n, n))
 
         # Change in force applied by spoke due to rim rotation, phi
-        dFdphi = k_f.dot(np.cross(e3, b).reshape((3, 1)))
+        dFdphi = k_f.dot(np.cross(e3, self.b).reshape((3, 1)))
 
         # Change in torque applied by spoke due to rim rotation
-        dTdphi = np.cross(b, e3).dot(k_f).dot(np.cross(b, e3))
+        dTdphi = np.cross(self.b, e3).dot(k_f).dot(np.cross(self.b, e3))
 
         k = np.zeros((4, 4))
 
@@ -210,18 +205,13 @@ class Spoke:
         n = self.n
         e3 = np.array([0., 0., 1.])
 
-        # Spoke nipple offset vector (relative to shear center)
-        # TODO: Correctly calculate v-component of b_s based on rim radius.
-        #       Set to zero for now.
-        b = np.array([self.rim_pt[2], 0., 0.])
-
         k_f = (1./self.length) * (np.eye(3) - np.outer(n, n))
 
         # Change in force applied by spoke due to rim rotation, phi
-        dFdphi = k_f.dot(np.cross(e3, b).reshape((3, 1)))
+        dFdphi = k_f.dot(np.cross(e3, self.b).reshape((3, 1)))
 
         # Change in torque applied by spoke due to rim rotation
-        dTdphi = np.cross(b, e3).dot(k_f).dot(np.cross(b, e3))
+        dTdphi = np.cross(self.b, e3).dot(k_f).dot(np.cross(self.b, e3))
 
         k = np.zeros((4, 4))
 
@@ -248,6 +238,19 @@ class Spoke:
         else:
             return None
 
+    def calc_tension_change(self, d, a=0.):
+        'Calculate change in tension given d=(u,v,w,phi) and a tightening adjustment a'
+
+        # Assume phi=0 if not given
+        if len(d) < 4:
+            d = np.append(d, 0.)
+
+        # u_n = u_s + phi(e_3 x b)
+        e3 = np.array([0., 0., 1.])
+        un = np.array([d[0], d[1], d[2]]) + d[3]*np.cross(e3, self.b)
+
+        return self.EA/self.length * (a - self.n.dot(un))
+
     def __init__(self, rim_pt, hub_pt, diameter, young_mod, density=None):
         self.EA = np.pi / 4 * diameter**2 * young_mod
         self.diameter = diameter
@@ -267,6 +270,11 @@ class Spoke:
 
         # Spoke axial unit vector
         self.n = np.array([du, dv, dw]) / self.length
+
+        # Spoke nipple offset vector (relative to shear center)
+        # TODO: Correctly calculate v-component of b_s based on rim radius.
+        #       Set to zero for now.
+        self.b = np.array([rim_pt[2], 0., 0.])
 
         # Approximate projected angles
         self.alpha = np.arctan(du / dv)
