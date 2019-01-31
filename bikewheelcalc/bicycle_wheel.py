@@ -1,9 +1,7 @@
 'Core classes BicycleWheel, Hub, Rim, and Spoke'
 
 import numpy as np
-import matplotlib.pyplot as plt
 from warnings import warn
-from .helpers import pol2rect
 
 
 class Rim:
@@ -446,66 +444,6 @@ class BicycleWheel:
             I_spokes = np.sum(I_spk) + np.sum(mr2_spk)
 
         return I_rim + I_spokes
-
-    def draw(self, ax, opts={}):
-        'Draw a graphical representation of the wheel'
-
-        # Set default drawing options
-        opts_d = {'axes_off': True,
-                  'rim_color': 'black',
-                  'rim_width': 2,
-                  'hub_ds_color': 'black',
-                  'hub_ls_color': 'gray',
-                  'hub_ds_width': 1,
-                  'hub_ls_width': 1,
-                  'spk_ds_width': 1,
-                  'spk_ls_width': 1,
-                  'spk_ds_color': 'black',
-                  'spk_ls_color': 'gray'}
-
-        opts_d.update(opts)
-
-        # Draw rim
-        R = self.rim.radius
-        ax.add_artist(plt.Circle((0, 0), 1.0, fill=False,
-                                 color=opts_d['rim_color'],
-                                 linewidth=opts_d['rim_width']))
-
-        # Draw hub
-        ax.add_artist(plt.Circle((0, 0), (self.hub.diameter_left/2)/R, fill=False,
-                                 color=opts_d['hub_ls_color'],
-                                 linewidth=opts_d['hub_ls_width'],
-                                 zorder=-1))
-        ax.add_artist(plt.Circle((0, 0), (self.hub.diameter_right/2)/R, fill=False,
-                                 color=opts_d['hub_ds_color'],
-                                 linewidth=opts_d['hub_ds_width'],
-                                 zorder=1))
-
-        # Draw spokes
-        for i, s in enumerate(self.spokes):
-
-            # Determine if its a drive-side or left-side spoke
-            if s.hub_pt[2] < 0:
-                ax.plot([pol2rect(s.hub_pt)[0]/R, pol2rect(s.rim_pt)[0]/R],
-                        [pol2rect(s.hub_pt)[1]/R, pol2rect(s.rim_pt)[1]/R],
-                        color=opts_d['spk_ds_color'],
-                        linewidth=opts_d['spk_ds_width'],
-                        zorder=i+2)
-            else:
-                ax.plot([pol2rect(s.hub_pt)[0]/R, pol2rect(s.rim_pt)[0]/R],
-                        [pol2rect(s.hub_pt)[1]/R, pol2rect(s.rim_pt)[1]/R],
-                        color=opts_d['spk_ls_color'],
-                        linewidth=opts_d['spk_ls_width'],
-                        zorder=-(i+2))
-
-        ax.set_xlim([-1.05, 1.05])
-        ax.set_ylim([-1.05, 1.05])
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.set_aspect('equal')
-
-        if opts_d['axes_off']:
-            ax.set_axis_off()
 
     def __init__(self):
         self.spokes = []
