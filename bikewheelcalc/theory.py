@@ -169,6 +169,7 @@ def calc_rad_stiff(wheel, theta=0., N=20, smeared_spokes=True, tension=True, buc
 
     return 1. / mm.B_theta(theta).dot(d)[1]
 
+
 def calc_tor_stiff(wheel, theta=0., N=20, smeared_spokes=True, tension=True, buckling=True, coupling=True, r0=False):
     'Calculate torsional (wind-up) stiffness in [N/rad].'
 
@@ -238,105 +239,3 @@ def calc_lambda_rad(wheel):
     k_vv = k_sp[1, 1]
 
     return k_vv*wheel.rim.radius**4 / (wheel.rim.young_mod * wheel.rim.I_rad)
-
-
-def print_continuum_stats(wheel):
-    'Print summary information about the wheel.'
-
-    print('lambda (lat) :', calc_lambda_lat(wheel))
-    print('lambda (rad) :', calc_lambda_rad(wheel))
-    print('R/le (lat)   :', np.power(calc_lambda_lat(wheel), 0.25))
-    print('R/le (rad)   :', np.power(calc_lambda_rad(wheel), 0.25))
-    print('Pn_lat       :', calc_Pn_lat(wheel))
-    print('Pn_rad       :', calc_Pn_rad(wheel))
-
-
-def mode_stiff(wheel, n, tension=0.0):
-    'Calculate stiffness for the nth mode.'
-
-    k_s = calc_continuum_stiff(wheel, tension)
-    k_uu = k_s[0, 0]
-    k_up = k_s[0, 3]
-    k_pp = k_s[3, 3]
-
-    # shortcuts
-    pi = np.pi
-    ns = len(wheel.spokes)
-    R = wheel.rim.radius
-    # l = wheel.spokes[0].length
-    EI = wheel.rim.young_mod * wheel.rim.I_lat
-    EIw = wheel.rim.young_mod * wheel.rim.I_warp
-    GJ = wheel.rim.shear_mod * wheel.rim.J_tor
-
-    rx = np.sqrt(wheel.rim.I_lat / wheel.rim.area)
-    ry = np.sqrt(wheel.rim.I_rad / wheel.rim.area)
-
-    CT = GJ + EIw*n**2/R**2
-
-    # Shear center coordinate
-    if 'y_0' in wheel.rim.sec_params:
-        y0 = wheel.rim.sec_params['y_0']
-    else:
-        y0 = 0.0
-
-    Nr = np.sum([s.tension*s.n[1] for s in wheel.spokes]) / (2*pi)
-
-    if n == 0:
-        U_uu = 2*pi*R*k_uu
-        U_ub = 2*pi*R*k_up
-        U_bb = 2*pi*EI/R + 2*pi*R*k_pp + 2*pi*Nr*y0
-    else:  # n > 0
-        U_uu = pi*EI*n**4/R**3 + pi*CT*n**2/R**3 + pi*R*k_uu \
-            - pi*Nr*n**2/R - pi*Nr*n**2*ry**2/R**3
-
-        U_ub = -pi*EI*n**2/R**2 - pi*CT*n**2/R**2 + pi*R*k_up \
-            - pi*Nr*n**2*ry**2/R**2 - pi*Nr*n**2*y0/R
-
-        U_bb = pi*EI/R + pi*CT*n**2/R + pi*R*k_pp\
-            + pi*Nr*y0 - pi*Nr*n**2*(rx**2 + ry**2 + y0**2)/R
-
-    # Solve linear system
-    K = np.zeros((2, 2))
-    K[0, 0] = U_uu
-    K[0, 1] = U_ub
-    K[1, 0] = U_ub
-    K[1, 1] = U_bb
-
-    x = np.linalg.solve(K, np.array([1, 0]))
-
-    # Displacement stiffness
-    Kn_u = 1.0 / x[0]
-
-    # Rotation stiffness
-    if x[1] == 0.0:
-        Kn_p = float('inf')
-    else:
-        Kn_p = 1.0 / x[1]
-
-    return Kn_u, Kn_p
-
-
-def lateral_stiffness(wheel, N=20, tension=0.0):
-    'Calculate lateral stiffness for a point load in N/m.'
-
-    Fn = np.zeros(N)  # flexibility of nth mode
-
-    for n in range(len(Fn)):
-        Fn[n] = 1.0 / mode_stiff(wheel, n, tension)[0]
-
-    K_lateral = 1.0 / sum(Fn)
-
-    return K_lateral
-
-
-def lateral_stiffness_phi(wheel, N=20, tension=0.0):
-    'Calculate the lateral/rotation stiffness P/phi for a point load.'
-
-    Fn = np.zeros(N)  # flexibility of nth mode
-
-    for n in range(len(Fn)):
-        Fn[n] = 1.0 / mode_stiff(wheel, n, tension)[1]
-
-    K_lateral_phi = 1.0 / sum(Fn)
-
-    return K_lateral_phi
