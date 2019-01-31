@@ -1,5 +1,8 @@
-# Ignore python bytecode
+# Compiled python modules.
 *.pyc
-class_structure.pptx
-# Allow a developer to put bikewheelcalc on their python path
-__init__.py
+
+# Setuptools distribution folder.
+/dist/
+
+# Python egg metadata, regenerated from source files by setuptools.
+/*.egg-info
