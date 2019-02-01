@@ -139,3 +139,41 @@ def test_spoke_tension(std_ncross):
     # Check all others are zero
     assert np.allclose(dT[:5], 0.)
     assert np.allclose(dT[6:], 0.)
+
+def test_uniform_tension(std_ncross):
+    'Check radial and tension influence functions against analytical solution'
+
+    w = std_ncross(0.)
+    w.apply_tension(0.001)  # Small tension to make K invertible
+
+    mm = ModeMatrix(w, N=24)
+    K = mm.K_rim() + mm.K_spk()
+
+    theta_s = [s.rim_pt[1] for s in w.spokes]
+
+    # Tighten all spokes by one millimeter
+    a = 0.001*np.ones(len(w.spokes))
+    dm = np.linalg.solve(K, mm.A_adj().dot(a))
+    v = mm.B_theta(theta_s, comps=1).dot(dm)
+    T = mm.spoke_tension_change(dm, a)
+
+    # Theoretical solution
+    R = w.rim.radius
+    ns = len(w.spokes)
+    ls = w.spokes[0].length
+    EAr = w.rim.young_mod*w.rim.area
+    EAs = w.spokes[0].EA
+    n2 = w.spokes[0].n[1]
+
+    v_theor = 0.001 / (2*np.pi*ls*EAr/(ns*n2*R*EAs) + n2)
+    T_theor = EAs/ls*(0.001 - v_theor*n2)
+
+    # All tensions same
+    assert np.allclose(T - np.mean(T), 0.)
+
+    # All displacements same
+    assert np.allclose(v - np.mean(v), 0.)
+
+    # Matches analytical solution within 0.1%
+    assert np.abs((v[0] - v_theor) / v[0]) < 0.001
+    assert np.abs((T[0] - T_theor) / T[0]) < 0.001
