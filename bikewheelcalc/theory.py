@@ -2,7 +2,6 @@
 
 import numpy as np
 from numpy import pi
-from scipy.linalg import eig
 from bikewheelcalc import BicycleWheel, ModeMatrix
 
 
@@ -82,18 +81,32 @@ def calc_buckling_tension_modematrix(wheel, smeared_spokes=False, coupling=True,
     K_matl = (mm.K_rim_matl(r0=r0) +
               mm.K_spk(tension=False, smeared_spokes=smeared_spokes))
 
-    K_geom = (mm.K_rim_geom(r0=r0) -
-              mm.K_spk_geom(smeared_spokes=smeared_spokes))
+    K_geom = (mm.K_spk_geom(smeared_spokes=smeared_spokes) -
+              mm.K_rim_geom(r0=r0))
 
-    # Solve generalized eigienvalue problem:
-    #   (K_matl + T*K_geom)
+    # Need to solve generalized eigienvalue problem:
+    #   (K_matl + T*K_geom)*x = 0   =>   K_matl*x = T*(-K_geom)*x
     if coupling:
-        w, v = eig(K_matl, K_geom)
+        A, B = (K_matl, -K_geom)
     else:
-        w, v = eig(mm.get_K_uncoupled(K_matl),
-                   mm.get_K_uncoupled(K_geom))
+        A, B = (mm.get_K_uncoupled(K_matl),
+                -mm.get_K_uncoupled(K_geom))
 
-    return np.min(np.real(w)[np.real(w) > 0])
+    # Find a scalar t such that A - t*B is invertible.
+    #  This is equivalent to finding t such that K_matl + t*K_geom is
+    #  invertible. A proper choice is a small multiple of estimated Tc
+    Tc_lin_est = calc_buckling_tension(wheel, approx='linear', N=N)
+
+    t = 0.1*Tc_lin_est[0]
+
+    # Solve the related eigenvalue problem (A - t*B)^-1 * B
+    w_c, v_c = np.linalg.eig(np.linalg.inv(A - t*B).dot(B))
+
+    # Select non-zero eigenvalues and transform back to (A, B) eigenvalues
+    nz_eig_ix = np.nonzero(~np.isclose(w_c, 0))[0]
+    w_ab = t + 1./w_c[nz_eig_ix]
+
+    return np.min(np.real(w_ab)[np.real(w_ab) > 0])
 
 
 def lat_mode_stiff(wheel, n, smeared_spokes=True, buckling=True, tension=True):

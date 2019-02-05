@@ -48,13 +48,20 @@ def test_Tc_modemat_lin(std_ncross):
     w = std_ncross(3)
     Tc_ = calc_buckling_tension(w, approx='linear', N=20)
 
-    Tc_mm = calc_buckling_tension_modematrix(w,
-                                             smeared_spokes=True,
-                                             coupling=True,
-                                             r0=False,
-                                             N=20)
+    Tc_mm_1 = calc_buckling_tension_modematrix(w,
+                                               smeared_spokes=True,
+                                               coupling=False,
+                                               r0=False,
+                                               N=6)
+    Tc_mm_2 = calc_buckling_tension_modematrix(w,
+                                               smeared_spokes=True,
+                                               coupling=True,
+                                               r0=False,
+                                               N=6)
 
-    assert np.allclose(Tc_[0], Tc_mm)
+    assert np.allclose(Tc_[0], Tc_mm_1)  # without coupling
+    assert np.allclose(Tc_[0], Tc_mm_2)  # with coupling
+
 
 def test_Tc_modemat_quad(std_ncross):
     'Mode matrix method should give same result as quadratic.'
@@ -63,11 +70,16 @@ def test_Tc_modemat_quad(std_ncross):
     w.rim.sec_params = {'y_0': 0.005}
 
     # Calculate buckling tension from generalized eigenvalue approach
-    Tc_mm = calc_buckling_tension_modematrix(w,
-                                             smeared_spokes=True,
-                                             coupling=False,
-                                             r0=False,
-                                             N=6)
+    Tc_mm_1 = calc_buckling_tension_modematrix(w,
+                                               smeared_spokes=True,
+                                               coupling=False,
+                                               r0=False,
+                                               N=6)
+    Tc_mm_2 = calc_buckling_tension_modematrix(w,
+                                               smeared_spokes=True,
+                                               coupling=True,
+                                               r0=False,
+                                               N=6)
 
     # Check against quadratic solution INCLUDING y0^2 term
     n = 2
@@ -94,7 +106,8 @@ def test_Tc_modemat_quad(std_ncross):
     # Solve for the smaller root
     Tc_qd = (2*pi*R/ns) * (-B - np.sqrt(B**2 - 4*A*C))/(2*A)
 
-    assert np.allclose(Tc_qd, Tc_mm)
+    assert np.allclose(Tc_qd, Tc_mm_1)  # without coupling
+    assert np.allclose(Tc_qd, Tc_mm_2)  # with coupling
 
 
 def test_Klat_uncoupled(std_ncross):
