@@ -438,12 +438,13 @@ class BicycleWheel:
             I_spokes = 0.
             warn('Some spoke densities are not specified.')
         else:
-            rim_pt = np.array([0., -self.rim.radius + s.b[1]], 0.)
-            hub_pt = rim_pt + s.n*s.length
-            mid_pt = 0.5*(rim_pt + hub_pt)
-            mr2_spk = np.array([s.calc_mass()*(mid_pt[0]**2 + mid_pt[1]**2)
-                                for s in self.spokes])
-            I_spokes = np.sum(I_spk) + np.sum(mr2_spk)
+            I_spokes = 0.
+            for i, s in enumerate(self.spokes):
+                rim_pt = np.array([0., -self.rim.radius + s.b[1], 0.])
+                hub_pt = rim_pt + s.n*s.length
+                mid_pt = 0.5*(rim_pt + hub_pt)
+                mr2_spk = s.calc_mass()*(mid_pt[0]**2 + mid_pt[1]**2)
+                I_spokes = I_spokes + I_spk[i] + mr2_spk
 
         return I_rim + I_spokes
 
