@@ -161,9 +161,12 @@ class Hub:
 class Spoke:
     """Spoke definition.
 
-    Args:
-        rim_pt: location of the spoke nipple as (R, theta, z)
-        hub_pt: location of the hub eyelet as (R, theta, z)
+    Defines a single spoke based on the angular position on the rim, axial
+    vector, spoke nipple offset vector, length, diameter, modulus, and density.
+
+    The spoke does not know its own position in space because it doesn't know
+    the radius of the rim. Thus it can only calculate local properties, like
+    the stiffness matrix and rotational inertia about its own COM.
     """
 
     def calc_k(self, tension=True):
@@ -249,34 +252,19 @@ class Spoke:
 
         return self.EA/self.length * (a - self.n.dot(un))
 
-    def __init__(self, rim_pt, hub_pt, diameter, young_mod, density=None):
+    def __init__(self, theta, n, b, length, diameter, young_mod, density=None):
         self.EA = np.pi / 4 * diameter**2 * young_mod
         self.diameter = diameter
         self.young_mod = young_mod
         self.density = density
         self.tension = 0.
-
-        self.rim_pt = rim_pt  # (R, theta, offset)
-        self.hub_pt = hub_pt  # (R, theta, z)
-
-        du = hub_pt[2] - rim_pt[2]
-        dv = (rim_pt[0] - hub_pt[0]) +\
-            hub_pt[0]*(1 - np.cos(hub_pt[1] - rim_pt[1]))
-        dw = hub_pt[0]*np.sin(hub_pt[1] - rim_pt[1])
-
-        self.length = np.sqrt(du**2 + dv**2 + dw**2)
+        self.length = length
 
         # Spoke axial unit vector
-        self.n = np.array([du, dv, dw]) / self.length
+        self.n = np.array(n)
 
         # Spoke nipple offset vector (relative to shear center)
-        # TODO: Correctly calculate v-component of b_s based on rim radius.
-        #       Set to zero for now.
-        self.b = np.array([rim_pt[2], 0., 0.])
-
-        # Approximate projected angles
-        self.alpha = np.arctan(du / dv)
-        self.beta = np.arctan(dw / dv)
+        self.b = np.array(b)
 
 
 class BicycleWheel:
