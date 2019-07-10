@@ -148,7 +148,7 @@ def test_Krad_rotsymm(std_ncross):
     w.rim.sec_params['y_0'] = 0.
     w.apply_tension(1.)
 
-    Krad = [calc_rad_stiff(w, theta=s.rim_pt[1], N=36, tension=True,
+    Krad = [calc_rad_stiff(w, theta=s.theta, N=36, tension=True,
                            smeared_spokes=False, coupling=False, r0=True)
             for s in w.spokes[:5]]
 
