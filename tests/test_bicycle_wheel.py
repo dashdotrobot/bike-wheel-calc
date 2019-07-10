@@ -228,17 +228,18 @@ def test_lace_cross_nds(std_no_spokes):
 
     w = std_no_spokes()
 
-    w.lace_cross_nds(n_spokes=18, n_cross=3, diameter=2.0e-3, young_mod=210e9, offset=0.01)
+    w.lace_cross_nds(n_spokes=18, n_cross=3, diameter=2.0e-3, young_mod=210e9,
+                     offset=0.01, offset_rad=0.01)
 
     # Check rim theta positions
     assert np.allclose([s.theta for s in w.spokes], np.arange(0., 2*np.pi, 2*np.pi/18.))
 
     # Check spoke vectors for leading spokes
     n_ll = np.array([0.025 - 0.01,
-                     0.3 - 0.025*np.cos(2*np.pi/18*3),
+                     0.3 - 0.025*np.cos(2*np.pi/18*3) - 0.01,
                      0.025*np.sin(2*np.pi/18*3)])
     n_lt = np.array([0.025 - 0.01,
-                     0.3 - 0.025*np.cos(2*np.pi/18*3),
+                     0.3 - 0.025*np.cos(2*np.pi/18*3) - 0.01,
                      -0.025*np.sin(2*np.pi/18*3)])
 
     assert np.all([np.allclose(s.n*s.length, n_ll) for s in w.spokes[::2]])
@@ -249,17 +250,18 @@ def test_lace_cross_ds(std_no_spokes):
 
     w = std_no_spokes()
 
-    w.lace_cross_ds(n_spokes=18, n_cross=3, diameter=2.0e-3, young_mod=210e9, offset=0.01)
+    w.lace_cross_ds(n_spokes=18, n_cross=3, diameter=2.0e-3, young_mod=210e9,
+                    offset=0.01, offset_rad=0.01)
 
     # Check rim theta positions
     assert np.allclose([s.theta for s in w.spokes], np.arange(2*np.pi/36., 2*np.pi, 2*np.pi/18.))
 
     # Check spoke vectors for leading spokes
     n_rl = np.array([-0.025 + 0.01,
-                     0.3 - 0.025*np.cos(2*np.pi/18*3),
+                     0.3 - 0.025*np.cos(2*np.pi/18*3) - 0.01,
                      0.025*np.sin(2*np.pi/18*3)])
     n_rt = np.array([-0.025 + 0.01,
-                     0.3 - 0.025*np.cos(2*np.pi/18*3),
+                     0.3 - 0.025*np.cos(2*np.pi/18*3) - 0.01,
                      -0.025*np.sin(2*np.pi/18*3)])
 
     assert np.all([np.allclose(s.n*s.length, n_rl) for s in w.spokes[::2]])

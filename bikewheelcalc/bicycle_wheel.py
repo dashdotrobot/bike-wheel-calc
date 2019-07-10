@@ -297,7 +297,7 @@ class BicycleWheel:
             theta_hub = theta_rim + 2*np.pi/n_spokes*n_cross*s_dir
 
             du = self.hub.width_nds - offset
-            dv = (self.rim.radius -
+            dv = (self.rim.radius - offset_rad -
                   self.hub.diameter_nds/2*np.cos(theta_hub - theta_rim))
             dw = self.hub.diameter_nds/2*np.sin(theta_hub - theta_rim)
 
@@ -321,7 +321,7 @@ class BicycleWheel:
             theta_hub = theta_rim + 2*np.pi/n_spokes*n_cross*s_dir
 
             du = -self.hub.width_ds + offset
-            dv = (self.rim.radius -
+            dv = (self.rim.radius - offset_rad -
                   self.hub.diameter_ds/2*np.cos(theta_hub - theta_rim))
             dw = self.hub.diameter_ds/2*np.sin(theta_hub - theta_rim)
 
