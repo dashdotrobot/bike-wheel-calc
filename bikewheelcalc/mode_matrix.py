@@ -162,7 +162,7 @@ class ModeMatrix:
             T_d = np.abs(s_0.n[0]*s_1.n[1]) + np.abs(s_1.n[0]*s_0.n[1])
 
             for s in self.wheel.spokes:
-                B = self.B_theta(s.rim_pt[1])
+                B = self.B_theta(s.theta)
                 K_spk = K_spk + 2*np.abs(s.n[0])/T_d * B.T.dot(s.calc_k_geom().dot(B))
 
         return K_spk
@@ -198,7 +198,7 @@ class ModeMatrix:
         else:  # Fully-discrete spokes
 
             for s in self.wheel.spokes:
-                B = self.B_theta(s.rim_pt[1])
+                B = self.B_theta(s.theta)
                 K_spk = K_spk + B.T.dot(s.calc_k(tension=tension).dot(B))
 
         return K_spk
@@ -219,8 +219,7 @@ class ModeMatrix:
         A = np.zeros((4 + self.n_modes*8, len(self.wheel.spokes)))
 
         for i, s in enumerate(self.wheel.spokes):
-            b = np.array([s.rim_pt[2], 0., 0.])
-            A[:, i] = s.EA/s.length * self.B_theta(s.rim_pt[1]).T\
+            A[:, i] = s.EA/s.length * self.B_theta(s.theta).T\
                 .dot(np.append(s.n, e3.dot(np.cross(s.b, s.n))))
 
         return A
@@ -273,7 +272,7 @@ class ModeMatrix:
         if a is None:
             a = np.zeros(self.n_spokes)
 
-        dT = [s.calc_tension_change(self.B_theta(s.rim_pt[1]).dot(dm), adj)
+        dT = [s.calc_tension_change(self.B_theta(s.theta).dot(dm), adj)
               for s, adj in zip(self.wheel.spokes, a)]
 
         return np.array(dT)

@@ -161,9 +161,12 @@ class Hub:
 class Spoke:
     """Spoke definition.
 
-    Args:
-        rim_pt: location of the spoke nipple as (R, theta, z)
-        hub_pt: location of the hub eyelet as (R, theta, z)
+    Defines a single spoke based on the angular position on the rim, axial
+    vector, spoke nipple offset vector, length, diameter, modulus, and density.
+
+    The spoke does not know its own position in space because it doesn't know
+    the radius of the rim. Thus it can only calculate local properties, like
+    the stiffness matrix and rotational inertia about its own COM.
     """
 
     def calc_k(self, tension=True):
@@ -249,34 +252,18 @@ class Spoke:
 
         return self.EA/self.length * (a - self.n.dot(un))
 
-    def __init__(self, rim_pt, hub_pt, diameter, young_mod, density=None):
-        self.EA = np.pi / 4 * diameter**2 * young_mod
+    def __init__(self, theta, n, b, length, diameter, young_mod, density=None):
+        self.theta = theta    # Angular position of rim point
+        self.n = np.array(n)  # Spoke axial unit vector
+        self.b = np.array(b)  # Spoke nipple offset vector
+        self.length = length
         self.diameter = diameter
         self.young_mod = young_mod
         self.density = density
+
         self.tension = 0.
+        self.EA = np.pi / 4 * diameter**2 * young_mod
 
-        self.rim_pt = rim_pt  # (R, theta, offset)
-        self.hub_pt = hub_pt  # (R, theta, z)
-
-        du = hub_pt[2] - rim_pt[2]
-        dv = (rim_pt[0] - hub_pt[0]) +\
-            hub_pt[0]*(1 - np.cos(hub_pt[1] - rim_pt[1]))
-        dw = hub_pt[0]*np.sin(hub_pt[1] - rim_pt[1])
-
-        self.length = np.sqrt(du**2 + dv**2 + dw**2)
-
-        # Spoke axial unit vector
-        self.n = np.array([du, dv, dw]) / self.length
-
-        # Spoke nipple offset vector (relative to shear center)
-        # TODO: Correctly calculate v-component of b_s based on rim radius.
-        #       Set to zero for now.
-        self.b = np.array([rim_pt[2], 0., 0.])
-
-        # Approximate projected angles
-        self.alpha = np.arctan(du / dv)
-        self.beta = np.arctan(dw / dv)
 
 
 class BicycleWheel:
@@ -291,7 +278,7 @@ class BicycleWheel:
     def reorder_spokes(self):
         'Ensure that spokes are ordered according to theta_rim'
 
-        a = np.argsort([s.rim_pt[1] for s in self.spokes])
+        a = np.argsort([s.theta for s in self.spokes])
         self.spokes = [self.spokes[i] for i in a]
 
     def lace_radial(self, n_spokes, diameter, young_mod, offset=0.0, density=None):
@@ -300,50 +287,62 @@ class BicycleWheel:
         return self.lace_cross(n_spokes, 0, diameter=diameter, young_mod=young_mod,
                                offset=offset, density=density)
 
-    def lace_cross_nds(self, n_spokes, n_cross, diameter, young_mod, offset=0., density=None):
+    def lace_cross_nds(self, n_spokes, n_cross, diameter, young_mod, offset=0., offset_rad=0., density=None):
         'Add spokes on the non-drive-side with n_cross crossings'
 
         # Start with a leading spoke at theta=0, and alternate
         for s in range(n_spokes):
-            theta_rim = 2*np.pi/n_spokes * s
             s_dir = 2*((s + 1) % 2) - 1  # [1, -1, 1, ...]
+            theta_rim = 2*np.pi/n_spokes * s
+            theta_hub = theta_rim + 2*np.pi/n_spokes*n_cross*s_dir
 
-            rim_pt = (self.rim.radius, theta_rim, offset)
-            hub_pt = (self.hub.diameter_nds/2,
-                      theta_rim + 2*np.pi/n_spokes*n_cross*s_dir,
-                      self.hub.width_nds)
+            du = self.hub.width_nds - offset
+            dv = (self.rim.radius - offset_rad -
+                  self.hub.diameter_nds/2*np.cos(theta_hub - theta_rim))
+            dw = self.hub.diameter_nds/2*np.sin(theta_hub - theta_rim)
 
-            self.spokes.append(Spoke(rim_pt, hub_pt, diameter, young_mod, density=density))
+            length = np.sqrt(du**2 + dv**2 + dw**2)
+            n = np.array([du/length, dv/length, dw/length])
+            b = np.array([offset, offset_rad, 0.])
+
+            self.spokes.append(Spoke(theta_rim, n, b, length,
+                                     diameter, young_mod, density=density))
 
         self.reorder_spokes()
         return True
 
-    def lace_cross_ds(self, n_spokes, n_cross, diameter, young_mod, offset=0., density=None):
+    def lace_cross_ds(self, n_spokes, n_cross, diameter, young_mod, offset=0., offset_rad=0., density=None):
         'Add spokes on the drive-side with n_cross crossings'
 
         # Start with a leading spoke at theta=0, and alternate
         for s in range(n_spokes):
-            theta_rim = 2*np.pi/n_spokes * (s + 0.5)
             s_dir = 2*((s + 1) % 2) - 1  # [1, -1, 1, ...]
+            theta_rim = 2*np.pi/n_spokes * (s + 0.5)
+            theta_hub = theta_rim + 2*np.pi/n_spokes*n_cross*s_dir
 
-            rim_pt = (self.rim.radius, theta_rim, -offset)
-            hub_pt = (self.hub.diameter_ds/2,
-                      theta_rim + 2*np.pi/n_spokes*n_cross*s_dir,
-                      -self.hub.width_ds)
+            du = -self.hub.width_ds + offset
+            dv = (self.rim.radius - offset_rad -
+                  self.hub.diameter_ds/2*np.cos(theta_hub - theta_rim))
+            dw = self.hub.diameter_ds/2*np.sin(theta_hub - theta_rim)
 
-            self.spokes.append(Spoke(rim_pt, hub_pt, diameter, young_mod, density=density))
+            length = np.sqrt(du**2 + dv**2 + dw**2)
+            n = np.array([du/length, dv/length, dw/length])
+            b = np.array([-offset, offset_rad, 0.])
+
+            self.spokes.append(Spoke(theta_rim, n, b, length,
+                                     diameter, young_mod, density=density))
 
         self.reorder_spokes()
         return True
 
-    def lace_cross(self, n_spokes, n_cross, diameter, young_mod, offset=0.0, density=None):
+    def lace_cross(self, n_spokes, n_cross, diameter, young_mod, offset=0., offset_rad=0., density=None):
         'Generate spokes in a "cross" pattern with n_cross crossings.'
 
         # Remove any existing spokes
         self.spokes = []
 
-        self.lace_cross_ds(n_spokes//2, n_cross, diameter, young_mod, offset, density=density)
-        self.lace_cross_nds(n_spokes//2, n_cross, diameter, young_mod, offset, density=density)
+        self.lace_cross_ds(n_spokes//2, n_cross, diameter, young_mod, offset, offset_rad, density=density)
+        self.lace_cross_nds(n_spokes//2, n_cross, diameter, young_mod, offset, offset_rad, density=density)
 
         return True
 
@@ -439,9 +438,13 @@ class BicycleWheel:
             I_spokes = 0.
             warn('Some spoke densities are not specified.')
         else:
-            mr2_spk = np.array([s.calc_mass()*(0.5*(s.hub_pt[0] + s.rim_pt[0]))**2
-                                for s in self.spokes])
-            I_spokes = np.sum(I_spk) + np.sum(mr2_spk)
+            I_spokes = 0.
+            for i, s in enumerate(self.spokes):
+                rim_pt = np.array([0., -self.rim.radius + s.b[1], 0.])
+                hub_pt = rim_pt + s.n*s.length
+                mid_pt = 0.5*(rim_pt + hub_pt)
+                mr2_spk = s.calc_mass()*(mid_pt[0]**2 + mid_pt[1]**2)
+                I_spokes = I_spokes + I_spk[i] + mr2_spk
 
         return I_rim + I_spokes
 

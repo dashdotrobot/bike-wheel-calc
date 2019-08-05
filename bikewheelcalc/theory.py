@@ -207,7 +207,7 @@ def calc_tor_stiff(wheel, theta=0., N=20, smeared_spokes=True, tension=True, buc
 def calc_Pn_lat(wheel):
     'Lateral Pippard number (ratio of length scale to spoke spacing).'
 
-    k_sp = calc_continuum_stiff(wheel)
+    k_sp = wheel.calc_kbar(wheel)
     k_uu = k_sp[0, 0]
 
     n_spokes = len(wheel.spokes)
@@ -224,7 +224,7 @@ def calc_Pn_lat(wheel):
 def calc_Pn_rad(wheel):
     'Radial Pippard number (ratio of length scale to spoke spacing).'
 
-    k_sp = calc_continuum_stiff(wheel)
+    k_sp = wheel.calc_kbar(wheel)
     k_vv = k_sp[1, 1]
 
     n_spokes = len(wheel.spokes)
@@ -239,7 +239,7 @@ def calc_Pn_rad(wheel):
 def calc_lambda_lat(wheel):
     'Calculate lambda = k_uu*R^4/EI_lat'
 
-    k_sp = calc_continuum_stiff(wheel)
+    k_sp = wheel.calc_kbar(wheel)
     k_uu = k_sp[0, 0]
 
     return k_uu*wheel.rim.radius**4 / (wheel.rim.young_mod * wheel.rim.I_lat)
@@ -248,7 +248,7 @@ def calc_lambda_lat(wheel):
 def calc_lambda_rad(wheel):
     'Calculate lambda = k_vv*R^4/EI_rad'
 
-    k_sp = calc_continuum_stiff(wheel)
+    k_sp = wheel.calc_kbar(wheel)
     k_vv = k_sp[1, 1]
 
     return k_vv*wheel.rim.radius**4 / (wheel.rim.young_mod * wheel.rim.I_rad)

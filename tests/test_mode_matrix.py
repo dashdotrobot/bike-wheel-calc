@@ -116,7 +116,7 @@ def test_A_adj(std_ncross):
     # Spoke adjustment has the same effect as a force applied along the spoke vector
     s = w.spokes[5]  # Chose an arbitrary spoke
     assert np.allclose(mm.A_adj()[:, 5],
-                       mm.F_ext(theta=s.rim_pt[1],
+                       mm.F_ext(theta=s.theta,
                                 f=s.EA/s.length * np.append(s.n, 0.)))
 
 def test_spoke_tension(std_ncross):
@@ -149,7 +149,7 @@ def test_uniform_tension(std_ncross):
     mm = ModeMatrix(w, N=24)
     K = mm.K_rim() + mm.K_spk()
 
-    theta_s = [s.rim_pt[1] for s in w.spokes]
+    theta_s = [s.theta for s in w.spokes]
 
     # Tighten all spokes by one millimeter
     a = 0.001*np.ones(len(w.spokes))
