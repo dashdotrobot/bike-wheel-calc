@@ -281,8 +281,12 @@ class BicycleWheel:
         a = np.argsort([s.theta for s in self.spokes])
         self.spokes = [self.spokes[i] for i in a]
 
-    def lace_radial(self, n_spokes, diameter, young_mod, density=None, offset_lat=0., offset_rad=0.):
+    def lace_radial(self, n_spokes, diameter, young_mod, density=None, offset_lat=0., offset_rad=0., offset=None):
         'Add spokes in a radial spoke pattern.'
+
+        # If 'offset' is specified' assign to 'offset_lat' for backwords compat
+        if offset is not None:
+            offset_lat = offset
 
         return self.lace_cross(n_spokes, 0, diameter=diameter, young_mod=young_mod,
                                density=density, offset_lat=offset_lat, offset_rad=offset_rad)
@@ -324,11 +328,15 @@ class BicycleWheel:
         self.reorder_spokes()
         return True
 
-    def lace_cross(self, n_spokes, n_cross, diameter, young_mod, density=None, offset_lat=0., offset_rad=0.):
+    def lace_cross(self, n_spokes, n_cross, diameter, young_mod, density=None, offset=None, offset_lat=0., offset_rad=0.):
         'Generate spokes in a "cross" pattern with n_cross crossings.'
 
         # Remove any existing spokes
         self.spokes = []
+
+        # If 'offset' is specified' assign to 'offset_lat' for backwords compat
+        if offset is not None:
+            offset_lat = offset
 
         # Non-drive-side
         self.lace_cross_side(n_spokes//2, n_cross, side=1, direction=1, offset=0.,
