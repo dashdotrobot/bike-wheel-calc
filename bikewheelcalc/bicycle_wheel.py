@@ -293,31 +293,28 @@ class BicycleWheel:
         # Direction (+1 leading, -1 trailing)
         direction = 2*(direction > 0) - 1
 
-        # Side (+ non-drive-side, - drive-side)
+        # Side (+1 non-drive-side, 0 drive-side)
         side = 1*(side > 0)
 
         # Hub parameters
-        hub_z = [-self.hub_width_ds + offset_lat,
-                 self.hub_width_nds - offset_lat]
-        hub_r = [self.hub.diameter_ds, self.hub.diameter_nds]
+        hub_z = [-self.hub.width_ds + offset_lat,
+                 self.hub.width_nds - offset_lat]
+        hub_r = [self.hub.diameter_ds/2, self.hub.diameter_nds/2]
+        sgn_offset = [-1, 1]
 
         for s in range(n_spokes):
             
             theta_rim = 2*np.pi/n_spokes*s + offset
-            theta_hub = theta_rim + 2*np.pi/n_spokes*n_cross*s_dir
+            theta_hub = theta_rim + 2*np.pi/n_spokes*n_cross*direction
 
             du = hub_z[side]
             dv = (self.rim.radius - offset_rad -
                   hub_r[side]*np.cos(theta_hub - theta_rim))
             dw = hub_r[side]*np.sin(theta_hub - theta_rim)
 
-            dv = (self.rim.radius - offset_rad -
-                  self.hub.diameter_ds/2*np.cos(theta_hub - theta_rim))
-            dw = self.hub.diameter_ds/2*np.sin(theta_hub - theta_rim)
-
             length = np.sqrt(du**2 + dv**2 + dw**2)
             n = np.array([du/length, dv/length, dw/length])
-            b = np.array([-offset, offset_rad, 0.])
+            b = np.array([offset_lat*sgn_offset[side], offset_rad, 0.])
 
             self.spokes.append(Spoke(theta_rim, n, b, length,
                                      diameter, young_mod, density=density))
@@ -339,7 +336,7 @@ class BicycleWheel:
                              offset_lat=offset_lat, offset_rad=offset_rad)
 
         # Drive-side
-        self.lace_cross_side(n_spokes//2, n_cross, side=1, direction=1, offset=np.pi/(n_spokes//2),
+        self.lace_cross_side(n_spokes//2, n_cross, side=-1, direction=1, offset=np.pi/(n_spokes//2),
                              diameter=diameter, young_mod=young_mod, density=density,
                              offset_lat=offset_lat, offset_rad=offset_rad)
 

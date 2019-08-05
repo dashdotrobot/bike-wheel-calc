@@ -114,7 +114,7 @@ def test_calc_kbar_offset_zero_eig(std_ncross, offset):
     'Check that u-phi submatrix has a zero eigenvalue'
 
     w = std_ncross(1)
-    w.lace_radial(n_spokes=36, diameter=1.8e-3, young_mod=210e9, offset=offset)
+    w.lace_radial(n_spokes=36, diameter=1.8e-3, young_mod=210e9, offset_lat=offset)
 
     kbar = w.calc_kbar(tension=False)
     w, v = np.linalg.eig(kbar[np.ix_([0, 3], [0, 3])])
@@ -154,7 +154,7 @@ def test_apply_tension_T_avg(std_ncross, n_cross):
     # Make hub asymmetric
     w.hub.width_left = 0.03
     w.hub.width_right = 0.02
-    w.lace_cross(n_spokes=36, n_cross=n_cross, diameter=1.8e-3, young_mod=210e9, offset=0.)
+    w.lace_cross(n_spokes=36, n_cross=n_cross, diameter=1.8e-3, young_mod=210e9, offset_lat=0.)
 
     w.apply_tension(T_avg=100.0)
 
@@ -173,7 +173,7 @@ def test_apply_tension_right(std_ncross, n_cross):
     # Make hub asymmetric
     w.hub.width_left = 0.03
     w.hub.width_right = 0.02
-    w.lace_cross(n_spokes=36, n_cross=n_cross, diameter=1.8e-3, young_mod=210e9, offset=0.)
+    w.lace_cross(n_spokes=36, n_cross=n_cross, diameter=1.8e-3, young_mod=210e9, offset_lat=0.)
 
     w.apply_tension(T_right=100.0)
 
@@ -190,7 +190,7 @@ def test_apply_tension_left(std_ncross, n_cross):
     # Make hub asymmetric
     w.hub.width_left = 0.03
     w.hub.width_right = 0.02
-    w.lace_cross(n_spokes=36, n_cross=n_cross, diameter=1.8e-3, young_mod=210e9, offset=0.)
+    w.lace_cross(n_spokes=36, n_cross=n_cross, diameter=1.8e-3, young_mod=210e9, offset_lat=0.)
 
     w.apply_tension(T_left=100.0)
 
@@ -228,8 +228,8 @@ def test_lace_cross_nds(std_no_spokes):
 
     w = std_no_spokes()
 
-    w.lace_cross_nds(n_spokes=18, n_cross=3, diameter=2.0e-3, young_mod=210e9,
-                     offset=0.01, offset_rad=0.01)
+    w.lace_cross_side(n_spokes=18, n_cross=3, side=1, diameter=2.0e-3, young_mod=210e9,
+                      offset_lat=0.01, offset_rad=0.01)
 
     # Check rim theta positions
     assert np.allclose([s.theta for s in w.spokes], np.arange(0., 2*np.pi, 2*np.pi/18.))
@@ -243,15 +243,15 @@ def test_lace_cross_nds(std_no_spokes):
                      -0.025*np.sin(2*np.pi/18*3)])
 
     assert np.all([np.allclose(s.n*s.length, n_ll) for s in w.spokes[::2]])
-    assert np.all([np.allclose(s.n*s.length, n_lt) for s in w.spokes[1::4]])
+    assert np.all([np.allclose(s.n*s.length, n_lt) for s in w.spokes[1::2]])
 
 
 def test_lace_cross_ds(std_no_spokes):
 
     w = std_no_spokes()
 
-    w.lace_cross_ds(n_spokes=18, n_cross=3, diameter=2.0e-3, young_mod=210e9,
-                    offset=0.01, offset_rad=0.01)
+    w.lace_cross_side(n_spokes=18, n_cross=3, side=-1, offset=np.pi/18, diameter=2.0e-3, young_mod=210e9,
+                      offset_lat=0.01, offset_rad=0.01)
 
     # Check rim theta positions
     assert np.allclose([s.theta for s in w.spokes], np.arange(2*np.pi/36., 2*np.pi, 2*np.pi/18.))
@@ -265,7 +265,7 @@ def test_lace_cross_ds(std_no_spokes):
                      -0.025*np.sin(2*np.pi/18*3)])
 
     assert np.all([np.allclose(s.n*s.length, n_rl) for s in w.spokes[::2]])
-    assert np.all([np.allclose(s.n*s.length, n_rt) for s in w.spokes[1::4]])
+    assert np.all([np.allclose(s.n*s.length, n_rt) for s in w.spokes[1::2]])
 
 
 # -----------------------------------------------------------------------------
@@ -281,7 +281,7 @@ def test_mass_rim_only():
                 I_lat=200./69e9, I_rad=100./69e9, J_tor=25./26e9, I_warp=0.0,
                 young_mod=69e9, shear_mod=26e9, density=1.)
 
-    w.lace_cross(n_spokes=36, n_cross=3, diameter=1.8e-3, young_mod=210e9, offset=0.)
+    w.lace_cross(n_spokes=36, n_cross=3, diameter=1.8e-3, young_mod=210e9, offset_lat=0.)
 
     # Should return a warning that some spoke densities are not specified
     with pytest.warns(UserWarning):
@@ -298,7 +298,7 @@ def test_mass_spokes_only():
                 I_lat=200./69e9, I_rad=100./69e9, J_tor=25./26e9, I_warp=0.0,
                 young_mod=69e9, shear_mod=26e9)
 
-    w.lace_radial(n_spokes=36, diameter=1.8e-3, young_mod=210e9, offset=0., density=1.0)
+    w.lace_radial(n_spokes=36, diameter=1.8e-3, young_mod=210e9, offset_lat=0., density=1.0)
 
     # Calculate mass of a single spoke
     m_spk = np.hypot(0.3 - 0.025, 0.025) * np.pi/4*(1.8e-3)**2 * 1.0
@@ -318,7 +318,7 @@ def test_I_rim_only():
                 I_lat=200./69e9, I_rad=100./69e9, J_tor=25./26e9, I_warp=0.0,
                 young_mod=69e9, shear_mod=26e9, density=1.)
 
-    w.lace_cross(n_spokes=36, n_cross=3, diameter=1.8e-3, young_mod=210e9, offset=0.)
+    w.lace_cross(n_spokes=36, n_cross=3, diameter=1.8e-3, young_mod=210e9, offset_lat=0.)
 
     # Should return a warning that some spoke densities are not specified
     with pytest.warns(UserWarning):
@@ -335,7 +335,7 @@ def test_I_spokes_only():
                 I_lat=200./69e9, I_rad=100./69e9, J_tor=25./26e9, I_warp=0.0,
                 young_mod=69e9, shear_mod=26e9)
 
-    w.lace_radial(n_spokes=36, diameter=1.8e-3, young_mod=210e9, offset=0., density=1.0)
+    w.lace_radial(n_spokes=36, diameter=1.8e-3, young_mod=210e9, offset_lat=0., density=1.0)
 
     # Calculate inertia of a single spoke
     m_spk = np.hypot(0.3 - 0.025, 0.025) * np.pi/4*(1.8e-3)**2 * 1.0
@@ -356,7 +356,7 @@ def test_I_wheel_less_than_max():
                 J_tor=25./26e9, I_lat=200./69e9, I_rad=100./69e9, I_warp=0.0,
                 young_mod=69e9, shear_mod=26e9, density=1.0)
 
-    w.lace_radial(n_spokes=36, diameter=1.8e-3, young_mod=210e9, offset=0., density=1.0)
+    w.lace_radial(n_spokes=36, diameter=1.8e-3, young_mod=210e9, offset_lat=0., density=1.0)
 
     I_wheel = w.calc_rot_inertia()
 
