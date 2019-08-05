@@ -17,7 +17,8 @@ def std_ncross():
                     I_lat=200./69e9, I_rad=100./69e9, J_tor=25./26e9, I_warp=0.0,
                     young_mod=69e9, shear_mod=26e9)
 
-        w.lace_cross(n_spokes=36, n_cross=n_cross, diameter=1.8e-3, young_mod=210e9, offset=0.)
+        w.lace_cross(n_spokes=36, n_cross=n_cross, diameter=1.8e-3, young_mod=210e9,
+                     offset_lat=0., offset_rad=0.)
 
         return w
 

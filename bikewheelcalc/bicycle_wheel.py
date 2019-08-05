@@ -281,68 +281,72 @@ class BicycleWheel:
         a = np.argsort([s.theta for s in self.spokes])
         self.spokes = [self.spokes[i] for i in a]
 
-    def lace_radial(self, n_spokes, diameter, young_mod, offset=0.0, density=None):
+    def lace_radial(self, n_spokes, diameter, young_mod, density=None, offset_lat=0., offset_rad=0., offset=None):
         'Add spokes in a radial spoke pattern.'
 
+        # If 'offset' is specified' assign to 'offset_lat' for backwords compat
+        if offset is not None:
+            offset_lat = offset
+
         return self.lace_cross(n_spokes, 0, diameter=diameter, young_mod=young_mod,
-                               offset=offset, density=density)
+                               density=density, offset_lat=offset_lat, offset_rad=offset_rad)
 
-    def lace_cross_nds(self, n_spokes, n_cross, diameter, young_mod, offset=0., offset_rad=0., density=None):
-        'Add spokes on the non-drive-side with n_cross crossings'
+    def lace_cross_side(self, n_spokes, n_cross, side=1, direction=1, offset=0, diameter=2.0e-3, young_mod=210e9, density=None, offset_lat=0., offset_rad=0.):
+        'Generate cross-laced spokes from the rim to one hub flange.'
 
-        # Start with a leading spoke at theta=0, and alternate
+        # Direction (+1 leading, -1 trailing)
+        direction = 2*(direction > 0) - 1
+
+        # Side (+1 non-drive-side, 0 drive-side)
+        side = 1*(side > 0)
+
+        # Hub parameters
+        hub_z = [-self.hub.width_ds + offset_lat,
+                 self.hub.width_nds - offset_lat]
+        hub_r = [self.hub.diameter_ds/2, self.hub.diameter_nds/2]
+        sgn_offset = [-1, 1]
+
         for s in range(n_spokes):
-            s_dir = 2*((s + 1) % 2) - 1  # [1, -1, 1, ...]
-            theta_rim = 2*np.pi/n_spokes * s
-            theta_hub = theta_rim + 2*np.pi/n_spokes*n_cross*s_dir
+            
+            theta_rim = 2*np.pi/n_spokes*s + offset
+            theta_hub = theta_rim + 2*np.pi/n_spokes*n_cross*direction
 
-            du = self.hub.width_nds - offset
+            du = hub_z[side]
             dv = (self.rim.radius - offset_rad -
-                  self.hub.diameter_nds/2*np.cos(theta_hub - theta_rim))
-            dw = self.hub.diameter_nds/2*np.sin(theta_hub - theta_rim)
+                  hub_r[side]*np.cos(theta_hub - theta_rim))
+            dw = hub_r[side]*np.sin(theta_hub - theta_rim)
 
             length = np.sqrt(du**2 + dv**2 + dw**2)
             n = np.array([du/length, dv/length, dw/length])
-            b = np.array([offset, offset_rad, 0.])
+            b = np.array([offset_lat*sgn_offset[side], offset_rad, 0.])
 
             self.spokes.append(Spoke(theta_rim, n, b, length,
                                      diameter, young_mod, density=density))
 
-        self.reorder_spokes()
-        return True
-
-    def lace_cross_ds(self, n_spokes, n_cross, diameter, young_mod, offset=0., offset_rad=0., density=None):
-        'Add spokes on the drive-side with n_cross crossings'
-
-        # Start with a leading spoke at theta=0, and alternate
-        for s in range(n_spokes):
-            s_dir = 2*((s + 1) % 2) - 1  # [1, -1, 1, ...]
-            theta_rim = 2*np.pi/n_spokes * (s + 0.5)
-            theta_hub = theta_rim + 2*np.pi/n_spokes*n_cross*s_dir
-
-            du = -self.hub.width_ds + offset
-            dv = (self.rim.radius - offset_rad -
-                  self.hub.diameter_ds/2*np.cos(theta_hub - theta_rim))
-            dw = self.hub.diameter_ds/2*np.sin(theta_hub - theta_rim)
-
-            length = np.sqrt(du**2 + dv**2 + dw**2)
-            n = np.array([du/length, dv/length, dw/length])
-            b = np.array([-offset, offset_rad, 0.])
-
-            self.spokes.append(Spoke(theta_rim, n, b, length,
-                                     diameter, young_mod, density=density))
+            direction = 2*(direction < 0) - 1  # flip direction between +1 and -1
 
         self.reorder_spokes()
         return True
 
-    def lace_cross(self, n_spokes, n_cross, diameter, young_mod, offset=0., offset_rad=0., density=None):
+    def lace_cross(self, n_spokes, n_cross, diameter, young_mod, density=None, offset=None, offset_lat=0., offset_rad=0.):
         'Generate spokes in a "cross" pattern with n_cross crossings.'
 
         # Remove any existing spokes
         self.spokes = []
 
-        self.lace_cross_ds(n_spokes//2, n_cross, diameter, young_mod, offset, offset_rad, density=density)
-        self.lace_cross_nds(n_spokes//2, n_cross, diameter, young_mod, offset, offset_rad, density=density)
+        # If 'offset' is specified' assign to 'offset_lat' for backwords compat
+        if offset is not None:
+            offset_lat = offset
+
+        # Non-drive-side
+        self.lace_cross_side(n_spokes//2, n_cross, side=1, direction=1, offset=0.,
+                             diameter=diameter, young_mod=young_mod, density=density,
+                             offset_lat=offset_lat, offset_rad=offset_rad)
+
+        # Drive-side
+        self.lace_cross_side(n_spokes//2, n_cross, side=-1, direction=1, offset=np.pi/(n_spokes//2),
+                             diameter=diameter, young_mod=young_mod, density=density,
+                             offset_lat=offset_lat, offset_rad=offset_rad)
 
         return True
 
