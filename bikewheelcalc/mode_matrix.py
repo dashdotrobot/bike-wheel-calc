@@ -7,32 +7,33 @@ from numpy import pi
 class ModeMatrix:
     """Solve coupled lateral, radial, and torsional deflections."""
 
-    def B_theta(self, theta=[0.], comps=[0, 1, 2, 3]):
-        'Matrix to transform mode coefficients to vector components.'
+    def B_theta(self, theta=[0.], comps=[0, 1, 2, 3], deriv=0):
+        'Modal shape function and its derivatives'
 
-        # Convert scalar values to arrays
         theta = np.atleast_1d(theta)
         comps = np.atleast_1d(comps)
 
-        B = np.zeros((len(theta)*len(comps), 4 + 8*self.n_modes))
+        fxns = [np.cos, lambda x: -np.sin(x), lambda x: -np.cos(x), np.sin]
+
+        X = np.zeros((len(theta)*len(comps), 4 + 8*self.n_modes))
 
         # For each angle theta
         for it in range(len(theta)):
 
             # Zero mode
             for ic, c in enumerate(comps):
-                B[len(comps)*it + ic, c] = 1.
+                X[len(comps)*it + ic, c] = 1*(deriv == 0)
 
             # Higher modes
             for n in range(1, self.n_modes + 1):
-                cos_ni = np.cos(n*theta[it])
-                sin_ni = np.sin(n*theta[it])
+                f1_ni = n**deriv * fxns[deriv%4](n*theta[it])
+                f2_ni = n**deriv * fxns[(deriv-1)%4](n*theta[it])
 
                 for ic, c in enumerate(comps):
-                    B[len(comps)*it + ic, 4 + 8*(n-1) + 2*c] = cos_ni
-                    B[len(comps)*it + ic, 4 + 8*(n-1) + 2*c+1] = sin_ni
+                    X[len(comps)*it + ic, 4 + 8*(n-1) + 2*c] = f1_ni
+                    X[len(comps)*it + ic, 4 + 8*(n-1) + 2*c+1] = f2_ni
 
-        return B
+        return X
 
     def K_rim_matl(self, r0=True):
         'Elastic portion of K_rim.'
