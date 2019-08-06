@@ -277,7 +277,7 @@ class ModeMatrix:
 
         return np.array(dT)
 
-    def M_rad(self, theta, dm):
+    def moment_rad(self, theta, dm):
         'Calculate radial bending moment at the location(s) specified by theta.'
 
         EI = self.wheel.rim.young_mod*self.wheel.rim.I_rad
@@ -285,6 +285,30 @@ class ModeMatrix:
 
         return EI/R**2*(self.B_theta(theta, comps=1, deriv=2) +
                         self.B_theta(theta, comps=2, deriv=1)).dot(dm)
+
+    def moment_lat(self, theta, dm):
+        'Calculate lateral bending moment at the location(s) specified by theta.'
+
+        EI = self.wheel.rim.young_mod*self.wheel.rim.I_lat
+        R = self.wheel.rim.radius
+
+        return EI/R**2*(self.B_theta(theta, comps=0, deriv=2) +
+                        R*self.B_theta(theta, comps=3)).dot(dm)
+
+    def normal_force(self, theta, dm):
+        'Calculate axial force in the rim at the location(s) specified by theta.'
+
+        EA = self.wheel.rim.young_mod*self.wheel.rim.area
+        R = self.wheel.rim.radius
+
+        y0 = 0.  # shear-center offset
+        if 'y_0' in self.wheel.rim.sec_params:
+            y0 = self.wheel.rim.sec_params['y_0']
+
+        return EA/R*(self.B_theta(theta, comps=2, deriv=1) -
+                     self.B_theta(theta, comps=1) +
+                     y0*self.B_theta(theta, comps=1, deriv=2)/R +
+                     y0*self.B_theta(theta, comps=2, deriv=1)/R).dot(dm)
 
     def __init__(self, wheel, N=10):
 
