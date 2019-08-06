@@ -225,7 +225,6 @@ class ModeMatrix:
 
         return A
 
-
     def get_ix_uncoupled(self, dim='lateral'):
         'Get indices for either lateral/torsional or radial/tangential modes.'
 
@@ -277,6 +276,15 @@ class ModeMatrix:
               for s, adj in zip(self.wheel.spokes, a)]
 
         return np.array(dT)
+
+    def M_rad(self, theta, dm):
+        'Calculate radial bending moment at the location(s) specified by theta.'
+
+        EI = self.wheel.rim.young_mod*self.wheel.rim.I_rad
+        R = self.wheel.rim.radius
+
+        return EI/R**2*(self.B_theta(theta, comps=1, deriv=2) +
+                        self.B_theta(theta, comps=2, deriv=1)).dot(dm)
 
     def __init__(self, wheel, N=10):
 
