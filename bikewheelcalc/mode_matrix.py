@@ -316,7 +316,7 @@ class ModeMatrix:
         EI = self.wheel.rim.young_mod*self.wheel.rim.I_rad
         R = self.wheel.rim.radius
 
-        return -EI/R**2*(self.B_theta(theta, comps=1, deriv=3) +
+        return -EI/R**3*(self.B_theta(theta, comps=1, deriv=3) +
                          self.B_theta(theta, comps=2, deriv=2)).dot(dm)
 
     def __init__(self, wheel, N=10):
