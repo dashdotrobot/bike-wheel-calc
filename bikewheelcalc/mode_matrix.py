@@ -39,17 +39,19 @@ class ModeMatrix:
 
         w = self.wheel
 
-        R = w.rim.radius                        # rim radius
-        EA = w.rim.young_mod * w.rim.area       # axial stiffness
-        EI_rad = w.rim.young_mod * w.rim.I_rad  # radial bending
-        EI_lat = w.rim.young_mod * w.rim.I_lat  # lateral bending
-        EIw = w.rim.young_mod * w.rim.I_warp    # warping constant
-        GJ = w.rim.shear_mod * w.rim.J_tor      # torsion constant
-
         y0 = 0.  # shear-center offset
         if 'y_0' in w.rim.sec_params:
             y0 = w.rim.sec_params['y_0']
-        Rc = R + y0
+
+        R = w.rim.radius  # rim radius at shear center
+        Rc = R + y0       # rim radius at centroid
+        f = R/Rc          # correction factor for section properties
+
+        EA = f*w.rim.young_mod * w.rim.area       # axial stiffness
+        EI_rad = f*w.rim.young_mod * w.rim.I_rad  # radial bending
+        EI_lat = f*w.rim.young_mod * w.rim.I_lat  # lateral bending
+        EIw = f*w.rim.young_mod * w.rim.I_warp    # warping constant
+        GJ = (1/f)*w.rim.shear_mod * w.rim.J_tor  # torsion constant
 
         r02 = 0.
         if r0:
@@ -96,7 +98,7 @@ class ModeMatrix:
             K_rim_matl[i0+6, i0+6] = (EI_lat*pi/R + EIw*pi/R**3*n**4 + GJ*pi/R*n**2)
             K_rim_matl[i0+7, i0+7] = K_rim_matl[i0+6, i0+6]
 
-        return R/Rc*K_rim_matl
+        return K_rim_matl
 
     def K_rim_geom(self, r0=True):
         'Tension-dependent portion of K_rim, such that K_rim = K_rim_matl - T_avg*K_rim_geom'
