@@ -10,7 +10,7 @@ class Rim:
     def __init__(self, radius, area,
                  I_rad, I_lat, J_tor, I_warp,
                  young_mod, shear_mod, density=None,
-                 sec_type='general', sec_params={}):
+                 sec_type='general', sec_params=None):
         self.radius = radius
         self.area = area
         self.I_rad = I_rad
@@ -21,7 +21,10 @@ class Rim:
         self.shear_mod = shear_mod
         self.density = density
         self.sec_type = sec_type
-        self.sec_params = sec_params
+        if sec_params is None:
+            self.sec_params = {}
+        else:
+            self.sec_params = sec_params
 
     @classmethod
     def general(cls, radius, area,
