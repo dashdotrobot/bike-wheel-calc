@@ -283,8 +283,10 @@ class ModeMatrix:
     def moment_rad(self, theta, dm):
         'Calculate radial bending moment at the location(s) specified by theta.'
 
-        EI = self.wheel.rim.young_mod*self.wheel.rim.I_rad
         R = self.wheel.rim.radius
+        f = (R/(R + self.wheel.rim.sec_params['y_0'])
+             if 'y_0' in self.wheel.rim.sec_params else 1.)
+        EI = f*self.wheel.rim.young_mod*self.wheel.rim.I_rad
 
         return EI/R**2*(self.B_theta(theta, comps=1, deriv=2) +
                         self.B_theta(theta, comps=2, deriv=1)).dot(dm)
@@ -292,8 +294,10 @@ class ModeMatrix:
     def moment_lat(self, theta, dm):
         'Calculate lateral bending moment at the location(s) specified by theta.'
 
-        EI = self.wheel.rim.young_mod*self.wheel.rim.I_lat
         R = self.wheel.rim.radius
+        f = (R/(R + self.wheel.rim.sec_params['y_0'])
+             if 'y_0' in self.wheel.rim.sec_params else 1.)
+        EI = f*self.wheel.rim.young_mod*self.wheel.rim.I_lat
 
         return EI/R**2*(self.B_theta(theta, comps=0, deriv=2) +
                         R*self.B_theta(theta, comps=3)).dot(dm)
@@ -301,12 +305,10 @@ class ModeMatrix:
     def normal_force(self, theta, dm):
         'Calculate axial force in the rim at the location(s) specified by theta.'
 
-        EA = self.wheel.rim.young_mod*self.wheel.rim.area
         R = self.wheel.rim.radius
-
-        y0 = 0.  # shear-center offset
-        if 'y_0' in self.wheel.rim.sec_params:
-            y0 = self.wheel.rim.sec_params['y_0']
+        y0 = (self.wheel.rim.sec_params['y_0']
+              if 'y_0' in self.wheel.rim.sec_params else 0.)
+        EA = R/(R+y0)*self.wheel.rim.young_mod*self.wheel.rim.area
 
         return EA/R*(self.B_theta(theta, comps=2, deriv=1) -
                      self.B_theta(theta, comps=1) +
@@ -316,8 +318,10 @@ class ModeMatrix:
     def shear_force_rad(self, theta, dm):
         'Calculate in-plane shear in the rim at the location(s) specified by theta.'
 
-        EI = self.wheel.rim.young_mod*self.wheel.rim.I_rad
         R = self.wheel.rim.radius
+        f = (R/(R + self.wheel.rim.sec_params['y_0'])
+             if 'y_0' in self.wheel.rim.sec_params else 1.)
+        EI = self.wheel.rim.young_mod*self.wheel.rim.I_rad
 
         return -EI/R**3*(self.B_theta(theta, comps=1, deriv=3) +
                          self.B_theta(theta, comps=2, deriv=2)).dot(dm)
