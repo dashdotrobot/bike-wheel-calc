@@ -85,9 +85,11 @@ def test_Tc_modemat_quad(std_ncross):
     n = 2
     ns = len(w.spokes)
     R = w.rim.radius
-    CT = w.rim.shear_mod*w.rim.J_tor
-    EI = w.rim.young_mod*w.rim.I_lat
     y0 = w.rim.sec_params['y_0']
+    f = R/(R+y0)
+    CT = (1/f)*w.rim.shear_mod*w.rim.J_tor
+    EI = f*w.rim.young_mod*w.rim.I_lat
+    
 
     kbar = w.calc_kbar(tension=False)
     kuu, kup, kpp = (kbar[0, 0], kbar[0, 3], kbar[3, 3])
