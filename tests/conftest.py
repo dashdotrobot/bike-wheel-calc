@@ -38,3 +38,25 @@ def std_no_spokes():
         return w
 
     return _build_wheel
+
+@pytest.fixture
+def ring_no_spokes():
+    'Return a wheel which approximates a ring with unit radius and no spokes'
+
+    def _build_wheel():
+            # Build planar wheel with two radial spokes
+        w = BicycleWheel()
+        w.hub = Hub(diameter=0.050, width=0.)
+        w.rim = Rim(radius=1., area=1e-6,
+                    I_lat=1e-9, I_rad=1e-9, J_tor=1e-9, I_warp=0.0,
+                    young_mod=1., shear_mod=1.)
+
+        w.lace_radial(n_spokes=2, diameter=1e-16, young_mod=1.,
+                      offset_lat=0., offset_rad=0.)
+
+        w.spokes[0].tension = 1e-9
+        w.spokes[1].tension = 1e-9
+
+        return w
+
+    return _build_wheel

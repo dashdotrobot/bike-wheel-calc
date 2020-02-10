@@ -62,7 +62,6 @@ def test_Tc_modemat_lin(std_ncross):
     assert np.allclose(Tc_[0], Tc_mm_1)  # without coupling
     assert np.allclose(Tc_[0], Tc_mm_2)  # with coupling
 
-
 def test_Tc_modemat_quad(std_ncross):
     'Mode matrix method should give same result as quadratic.'
 
@@ -110,7 +109,6 @@ def test_Tc_modemat_quad(std_ncross):
 
     assert np.allclose(Tc_qd, Tc_mm_1)  # without coupling
     assert np.allclose(Tc_qd, Tc_mm_2)  # with coupling
-
 
 def test_Klat_uncoupled(std_ncross):
     'Check that calc_lat_stiff() and Eqn. (2.71) give same result'
