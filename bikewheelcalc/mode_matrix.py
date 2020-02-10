@@ -302,6 +302,25 @@ class ModeMatrix:
         return EI/R**2*(self.B_theta(theta, comps=0, deriv=2) +
                         R*self.B_theta(theta, comps=3)).dot(dm)
 
+    def moment_tor(self, theta, dm):
+        'Calculate twisting moment at the location(s) specified by theta.'
+
+        R = self.wheel.rim.radius
+        f = (R/(R + self.wheel.rim.sec_params['y_0'])
+             if 'y_0' in self.wheel.rim.sec_params else 1.)
+        GJ = (1/f)*self.wheel.rim.shear_mod*self.wheel.rim.J_tor
+        EIw = f*self.wheel.rim.young_mod*self.wheel.rim.I_warp
+
+        # Saint-Venant torsion (active)
+        M_GJ = GJ/R**2*(R*self.B_theta(theta, comps=3, deriv=1) -
+                        self.B_theta(theta, comps=0, deriv=1)).dot(dm)
+
+        # Warping torsion (reactive)
+        M_W = EIw/R**4*(R*self.B_theta(theta, comps=3, deriv=3) -
+                        self.B_theta(theta, comps=0, deriv=3)).dot(dm)
+
+        return M_GJ + M_W
+
     def normal_force(self, theta, dm):
         'Calculate axial force in the rim at the location(s) specified by theta.'
 

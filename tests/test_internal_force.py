@@ -52,16 +52,22 @@ def test_four_pt_bend(ring_no_spokes):
 
     d = np.linalg.solve(K, F_ext)
 
+    # Symmetry points
+    nodes = [0., np.pi/2, np.pi, 3*np.pi/2]
+    antinodes = [np.pi/4, 3*np.pi/4, 5*np.pi/4, 7*np.pi/4]
+
     # Lateral bending moment at supports (may be inaccurate due to cusp)
-    assert np.allclose(mm.moment_lat([0., np.pi], d), -0.5, rtol=2)
-    assert np.allclose(mm.moment_lat([np.pi/2, 3*np.pi/2], d), 0.5, rtol=2)
+    assert np.allclose(mm.moment_lat(nodes, d), [-0.5, 0.5, -0.5, 0.5], rtol=2)
 
     # Lateral bending moment between supports
-    assert np.allclose(mm.moment_lat([np.pi/4, 3*np.pi/4, 5*np.pi/4, 7*np.pi/4],
-                                     d), 0.)
+    assert np.allclose(mm.moment_lat(antinodes, d), 0.)
+
+    # Twisting moment at supports
+    assert np.allclose(mm.moment_tor(nodes, d), 0.)
+
+    # Twisting moment between supports
+    assert np.allclose(mm.moment_tor(antinodes, d),
+                       (np.sqrt(2)-1)/2*np.array([-1., 1., -1., 1.]))
 
     # Lateral shear force
-    assert False
-
-    # Twisting moment
     assert False
