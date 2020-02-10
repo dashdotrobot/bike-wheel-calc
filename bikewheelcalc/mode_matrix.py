@@ -7,48 +7,52 @@ from numpy import pi
 class ModeMatrix:
     """Solve coupled lateral, radial, and torsional deflections."""
 
-    def B_theta(self, theta=[0.], comps=[0, 1, 2, 3]):
-        'Matrix to transform mode coefficients to vector components.'
+    def B_theta(self, theta=[0.], comps=[0, 1, 2, 3], deriv=0):
+        'Modal shape function and its derivatives'
 
-        # Convert scalar values to arrays
         theta = np.atleast_1d(theta)
         comps = np.atleast_1d(comps)
 
-        B = np.zeros((len(theta)*len(comps), 4 + 8*self.n_modes))
+        fxns = [np.cos, lambda x: -np.sin(x), lambda x: -np.cos(x), np.sin]
+
+        X = np.zeros((len(theta)*len(comps), 4 + 8*self.n_modes))
 
         # For each angle theta
         for it in range(len(theta)):
 
             # Zero mode
             for ic, c in enumerate(comps):
-                B[len(comps)*it + ic, c] = 1.
+                X[len(comps)*it + ic, c] = 1*(deriv == 0)
 
             # Higher modes
             for n in range(1, self.n_modes + 1):
-                cos_ni = np.cos(n*theta[it])
-                sin_ni = np.sin(n*theta[it])
+                f1_ni = n**deriv * fxns[deriv%4](n*theta[it])
+                f2_ni = n**deriv * fxns[(deriv-1)%4](n*theta[it])
 
                 for ic, c in enumerate(comps):
-                    B[len(comps)*it + ic, 4 + 8*(n-1) + 2*c] = cos_ni
-                    B[len(comps)*it + ic, 4 + 8*(n-1) + 2*c+1] = sin_ni
+                    X[len(comps)*it + ic, 4 + 8*(n-1) + 2*c] = f1_ni
+                    X[len(comps)*it + ic, 4 + 8*(n-1) + 2*c+1] = f2_ni
 
-        return B
+        return X
 
     def K_rim_matl(self, r0=True):
         'Elastic portion of K_rim.'
 
         w = self.wheel
 
-        R = w.rim.radius                        # rim radius
-        EA = w.rim.young_mod * w.rim.area       # axial stiffness
-        EI_rad = w.rim.young_mod * w.rim.I_rad  # radial bending
-        EI_lat = w.rim.young_mod * w.rim.I_lat  # lateral bending
-        EIw = w.rim.young_mod * w.rim.I_warp    # warping constant
-        GJ = w.rim.shear_mod * w.rim.J_tor      # torsion constant
-
         y0 = 0.  # shear-center offset
         if 'y_0' in w.rim.sec_params:
             y0 = w.rim.sec_params['y_0']
+
+        R = w.rim.radius  # rim radius at shear center
+        Rc = R + y0       # rim radius at centroid
+        f = R/Rc          # correction factor for section properties
+
+        EA = f*w.rim.young_mod * w.rim.area       # axial stiffness
+        EI_rad = f*w.rim.young_mod * w.rim.I_rad  # radial bending
+        EI_lat = f*w.rim.young_mod * w.rim.I_lat  # lateral bending
+        EIw = f*w.rim.young_mod * w.rim.I_warp    # warping constant
+        GJ = (1/f)*w.rim.shear_mod * w.rim.J_tor  # torsion constant
 
         r02 = 0.
         if r0:
@@ -224,7 +228,6 @@ class ModeMatrix:
 
         return A
 
-
     def get_ix_uncoupled(self, dim='lateral'):
         'Get indices for either lateral/torsional or radial/tangential modes.'
 
@@ -276,6 +279,83 @@ class ModeMatrix:
               for s, adj in zip(self.wheel.spokes, a)]
 
         return np.array(dT)
+
+    def moment_rad(self, theta, dm):
+        'Calculate radial bending moment at the location(s) specified by theta.'
+
+        R = self.wheel.rim.radius
+        f = (R/(R + self.wheel.rim.sec_params['y_0'])
+             if 'y_0' in self.wheel.rim.sec_params else 1.)
+        EI = f*self.wheel.rim.young_mod*self.wheel.rim.I_rad
+
+        return EI/R**2*(self.B_theta(theta, comps=1, deriv=2) +
+                        self.B_theta(theta, comps=2, deriv=1)).dot(dm)
+
+    def moment_lat(self, theta, dm):
+        'Calculate lateral bending moment at the location(s) specified by theta.'
+
+        R = self.wheel.rim.radius
+        f = (R/(R + self.wheel.rim.sec_params['y_0'])
+             if 'y_0' in self.wheel.rim.sec_params else 1.)
+        EI = f*self.wheel.rim.young_mod*self.wheel.rim.I_lat
+
+        return EI/R**2*(self.B_theta(theta, comps=0, deriv=2) +
+                        R*self.B_theta(theta, comps=3)).dot(dm)
+
+    def moment_tor(self, theta, dm):
+        'Calculate twisting moment at the location(s) specified by theta.'
+
+        R = self.wheel.rim.radius
+        f = (R/(R + self.wheel.rim.sec_params['y_0'])
+             if 'y_0' in self.wheel.rim.sec_params else 1.)
+        GJ = (1/f)*self.wheel.rim.shear_mod*self.wheel.rim.J_tor
+        EIw = f*self.wheel.rim.young_mod*self.wheel.rim.I_warp
+
+        # Saint-Venant torsion (active)
+        M_GJ = GJ/R**2*(R*self.B_theta(theta, comps=3, deriv=1) -
+                        self.B_theta(theta, comps=0, deriv=1)).dot(dm)
+
+        # Warping torsion (reactive)
+        M_W = EIw/R**4*(R*self.B_theta(theta, comps=3, deriv=3) -
+                        self.B_theta(theta, comps=0, deriv=3)).dot(dm)
+
+        return M_GJ + M_W
+
+    def normal_force(self, theta, dm):
+        'Calculate axial force in the rim at the location(s) specified by theta.'
+
+        R = self.wheel.rim.radius
+        y0 = (self.wheel.rim.sec_params['y_0']
+              if 'y_0' in self.wheel.rim.sec_params else 0.)
+        EA = R/(R+y0)*self.wheel.rim.young_mod*self.wheel.rim.area
+
+        return EA/R*(self.B_theta(theta, comps=2, deriv=1) -
+                     self.B_theta(theta, comps=1) +
+                     y0*self.B_theta(theta, comps=1, deriv=2)/R +
+                     y0*self.B_theta(theta, comps=2, deriv=1)/R).dot(dm)
+
+    def shear_force_rad(self, theta, dm):
+        'Calculate in-plane shear in the rim at the location(s) specified by theta.'
+
+        R = self.wheel.rim.radius
+        f = (R/(R + self.wheel.rim.sec_params['y_0'])
+             if 'y_0' in self.wheel.rim.sec_params else 1.)
+        EI = f*self.wheel.rim.young_mod*self.wheel.rim.I_rad
+
+        return -EI/R**3*(self.B_theta(theta, comps=1, deriv=3) +
+                         self.B_theta(theta, comps=2, deriv=2)).dot(dm)
+
+    def shear_force_lat(self, theta, dm):
+        'Calculate out-of-plane shear in the rim at the location(s) specified.'
+        
+        R = self.wheel.rim.radius
+        f = (R/(R + self.wheel.rim.sec_params['y_0'])
+             if 'y_0' in self.wheel.rim.sec_params else 1.)
+        EI = f*self.wheel.rim.young_mod*self.wheel.rim.I_lat
+
+        return -(EI/R**3*(self.B_theta(theta, comps=0, deriv=3) +
+                          R*self.B_theta(theta, comps=3, deriv=1)).dot(dm)
+                 + self.moment_tor(theta, dm)/R)
 
     def __init__(self, wheel, N=10):
 

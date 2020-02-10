@@ -62,7 +62,6 @@ def test_Tc_modemat_lin(std_ncross):
     assert np.allclose(Tc_[0], Tc_mm_1)  # without coupling
     assert np.allclose(Tc_[0], Tc_mm_2)  # with coupling
 
-
 def test_Tc_modemat_quad(std_ncross):
     'Mode matrix method should give same result as quadratic.'
 
@@ -85,9 +84,11 @@ def test_Tc_modemat_quad(std_ncross):
     n = 2
     ns = len(w.spokes)
     R = w.rim.radius
-    CT = w.rim.shear_mod*w.rim.J_tor
-    EI = w.rim.young_mod*w.rim.I_lat
     y0 = w.rim.sec_params['y_0']
+    f = R/(R+y0)
+    CT = (1/f)*w.rim.shear_mod*w.rim.J_tor
+    EI = f*w.rim.young_mod*w.rim.I_lat
+    
 
     kbar = w.calc_kbar(tension=False)
     kuu, kup, kpp = (kbar[0, 0], kbar[0, 3], kbar[3, 3])
@@ -108,7 +109,6 @@ def test_Tc_modemat_quad(std_ncross):
 
     assert np.allclose(Tc_qd, Tc_mm_1)  # without coupling
     assert np.allclose(Tc_qd, Tc_mm_2)  # with coupling
-
 
 def test_Klat_uncoupled(std_ncross):
     'Check that calc_lat_stiff() and Eqn. (2.71) give same result'
