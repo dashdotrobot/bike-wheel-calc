@@ -12,7 +12,7 @@ def test_diametral_compression(ring_no_spokes):
 
     w = ring_no_spokes()
 
-    mm = ModeMatrix(w, N=64)
+    mm = ModeMatrix(w, N=128)
     F_ext = (mm.F_ext([0.], np.array([[0., 1., 0., 0.]])) +
              mm.F_ext([np.pi], np.array([[0., 1., 0., 0.]])))
     K = (mm.K_rim(tension=False, r0=False) +
@@ -28,8 +28,13 @@ def test_diametral_compression(ring_no_spokes):
     assert np.allclose(mm.shear_force_rad([np.pi/2, 3*np.pi/2], d),
                        0.)
 
-    # Bending moment
-    assert False
+    # Bending moment at pi/2
+    assert np.allclose(mm.moment_rad(np.pi/2, d),
+                       0.5 - 1./np.pi, rtol=1e-3)
+
+    # Bending moment at pi/4
+    assert np.allclose(mm.moment_rad(np.pi/4, d),
+                       np.cos(np.pi/4)/2 - 1./np.pi, rtol=1e-3)
 
 def test_shear_lat():
     assert False
