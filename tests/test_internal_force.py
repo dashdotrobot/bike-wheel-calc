@@ -48,14 +48,19 @@ def test_four_pt_bend(ring_no_spokes):
              mm.F_ext(3*np.pi/2, [-1., 0., 0., 0.]))
 
     K = (mm.K_rim(tension=False, r0=False) +
-         mm.K_spk(tension=True, smeared_spokes=False))
+         mm.K_spk(tension=True, smeared_spokes=True))
 
     d = np.linalg.solve(K, F_ext)
 
-    # Lateral shear force
-    assert False
-
     # Lateral bending moment at supports (may be inaccurate due to cusp)
+    assert np.allclose(mm.moment_lat([0., np.pi], d), -0.5, rtol=2)
+    assert np.allclose(mm.moment_lat([np.pi/2, 3*np.pi/2], d), 0.5, rtol=2)
+
+    # Lateral bending moment between supports
+    assert np.allclose(mm.moment_lat([np.pi/4, 3*np.pi/4, 5*np.pi/4, 7*np.pi/4],
+                                     d), 0.)
+
+    # Lateral shear force
     assert False
 
     # Twisting moment

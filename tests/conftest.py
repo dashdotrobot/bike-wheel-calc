@@ -49,9 +49,9 @@ def ring_no_spokes():
         w.hub = Hub(diameter=0.050, width=0.)
         w.rim = Rim(radius=1., area=1e-6,
                     I_lat=1e-9, I_rad=1e-9, J_tor=1e-9, I_warp=0.0,
-                    young_mod=1., shear_mod=1.)
+                    young_mod=1e9, shear_mod=1e9)
 
-        w.lace_radial(n_spokes=4, diameter=1e-16, young_mod=1.,
+        w.lace_radial(n_spokes=4, diameter=1e-9, young_mod=1e9,
                       offset_lat=0., offset_rad=0.)
 
         for s in w.spokes:
