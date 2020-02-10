@@ -340,10 +340,22 @@ class ModeMatrix:
         R = self.wheel.rim.radius
         f = (R/(R + self.wheel.rim.sec_params['y_0'])
              if 'y_0' in self.wheel.rim.sec_params else 1.)
-        EI = self.wheel.rim.young_mod*self.wheel.rim.I_rad
+        EI = f*self.wheel.rim.young_mod*self.wheel.rim.I_rad
 
         return -EI/R**3*(self.B_theta(theta, comps=1, deriv=3) +
                          self.B_theta(theta, comps=2, deriv=2)).dot(dm)
+
+    def shear_force_lat(self, theta, dm):
+        'Calculate out-of-plane shear in the rim at the location(s) specified.'
+        
+        R = self.wheel.rim.radius
+        f = (R/(R + self.wheel.rim.sec_params['y_0'])
+             if 'y_0' in self.wheel.rim.sec_params else 1.)
+        EI = f*self.wheel.rim.young_mod*self.wheel.rim.I_lat
+
+        return -(EI/R**3*(self.B_theta(theta, comps=0, deriv=3) +
+                          R*self.B_theta(theta, comps=3, deriv=1)).dot(dm)
+                 + self.moment_tor(theta, dm)/R)
 
     def __init__(self, wheel, N=10):
 

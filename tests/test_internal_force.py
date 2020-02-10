@@ -69,5 +69,21 @@ def test_four_pt_bend(ring_no_spokes):
     assert np.allclose(mm.moment_tor(antinodes, d),
                        (np.sqrt(2)-1)/2*np.array([-1., 1., -1., 1.]))
 
-    # Lateral shear force
-    assert False
+    # Lateral shear force at supports
+    assert np.allclose(mm.shear_force_lat(nodes, d), 0.)
+
+    # Lateral shear force between supports (antinodes)
+    assert np.allclose(mm.shear_force_lat(antinodes, d), [-0.5, 0.5, -0.5, 0.5],
+                       rtol=1e-2)
+
+    # Lateral shear force between supports (mean value)
+    x_tol = 0.05*np.pi
+    th_bw = np.linspace(x_tol, np.pi/2 - x_tol)
+
+    assert np.allclose(np.mean(mm.shear_force_lat(th_bw, d)), -0.5, rtol=1e-3)
+    assert np.allclose(np.mean(mm.shear_force_lat(th_bw + np.pi/2, d)), 0.5,
+                       rtol=1e-3)
+    assert np.allclose(np.mean(mm.shear_force_lat(th_bw + np.pi, d)), -0.5,
+                       rtol=1e-3)
+    assert np.allclose(np.mean(mm.shear_force_lat(th_bw + 3*np.pi/2, d)), 0.5,
+                       rtol=1e-3)
