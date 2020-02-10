@@ -51,11 +51,11 @@ def ring_no_spokes():
                     I_lat=1e-9, I_rad=1e-9, J_tor=1e-9, I_warp=0.0,
                     young_mod=1., shear_mod=1.)
 
-        w.lace_radial(n_spokes=2, diameter=1e-16, young_mod=1.,
+        w.lace_radial(n_spokes=4, diameter=1e-16, young_mod=1.,
                       offset_lat=0., offset_rad=0.)
 
-        w.spokes[0].tension = 1e-9
-        w.spokes[1].tension = 1e-9
+        for s in w.spokes:
+            s.tension = 1e-9
 
         return w
 
