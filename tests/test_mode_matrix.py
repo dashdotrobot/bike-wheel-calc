@@ -177,3 +177,35 @@ def test_uniform_tension(std_ncross):
     # Matches analytical solution within 0.1%
     assert np.abs((v[0] - v_theor) / v[0]) < 0.001
     assert np.abs((T[0] - T_theor) / T[0]) < 0.001
+
+def test_new_K_spk(std_ncross):
+    'Check new K_spk formulation against old'
+
+    w = std_ncross(0)
+
+    w.lace_cross(n_spokes=36, n_cross=0, diameter=1.8e-3, young_mod=210e9,
+                 offset_lat=0.005, offset_rad=0.)
+
+    mm = ModeMatrix(w, N=24)
+
+    # No gradient and no tension should give same result
+    w.apply_tension(0.)
+    K1 = mm.K_spk(tension=False)
+    K2 = mm.K_spk_new(tension=False, grad=False, wrot=False)
+
+    # print(K1[:4, :4])
+    # print('')
+    # print(K2[:4, :4])
+
+    assert np.allclose(K1, K2)
+
+    # Should No gradient and w-rotation should give same result?
+    w.apply_tension(100000.)
+    K1 = mm.K_spk(tension=True)
+    K2 = mm.K_spk_new(tension=True, grad=False, wrot=False)
+
+    print(K1[:4, :4])
+    print('')
+    print(K2[:4, :4])
+
+    assert np.allclose(K1, K2)

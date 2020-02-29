@@ -4,6 +4,13 @@ import numpy as np
 from numpy import pi
 
 
+def xp(v):
+    'Calculate cross-product matrix such that xp*u = v x u'
+
+    return np.array([[0., -v[2], v[1]],
+                     [v[2], 0., v[0]],
+                     [-v[1], v[0], 0.]])
+
 class ModeMatrix:
     """Solve coupled lateral, radial, and torsional deflections."""
 
@@ -204,6 +211,34 @@ class ModeMatrix:
             for s in self.wheel.spokes:
                 B = self.B_theta(s.theta)
                 K_spk = K_spk + B.T.dot(s.calc_k(tension=tension).dot(B))
+
+        return K_spk
+
+    def K_spk_new(self, tension=True, grad=True, wrot=True):
+        'Correct mode stiffness formulation, with gradients of u'
+
+        K_spk = np.zeros((4 + self.n_modes*8, 4 + self.n_modes*8))
+
+        X_w = np.array([[0., 0., -wrot*1./self.wheel.rim.radius, 0.],
+                        [0., 0., 0., 0.], [0., 0., 0., 1.]])
+        Xpw = grad*np.array([[0., -1., 0., 0.], [1., 0., 0., 0.], [0., 0., 0., 0.]])
+
+        for s in self.wheel.spokes:
+            Bu = self.B_theta(s.theta, comps=[0, 1, 2])
+            Bw = X_w.dot(self.B_theta(s.theta)) + Xpw.dot(self.B_theta(s.theta, deriv=1))
+
+            kf = s.calc_kf_n(tension=tension)
+            nx = xp(s.n)
+            bx = xp(s.b)
+            T0 = s.tension if tension else 0.
+
+            K_spk = (K_spk
+                     + Bu.T.dot(kf).dot(Bu)
+                     + Bu.T.dot(kf).dot(bx).dot(Bw)          # Changed sign!
+                     + Bw.T.dot(bx.T).dot(kf).dot(Bu)        # Changed sign and split!
+                     + Bw.T.dot(bx).dot(kf).dot(bx).dot(Bw)  # Transpose of term above!
+                     + T0*Bw.T.dot(nx).dot(Bu)               # Not symmetric!
+                     + T0*Bw.T.dot(nx).dot(bx).dot(Bw))      # Not symmetric!
 
         return K_spk
 

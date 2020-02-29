@@ -226,6 +226,21 @@ class Spoke:
 
         return k
 
+    def calc_kf_n(self, tension=True):
+        'Calculate spoke force matrix at spoke nipple'
+
+        n = self.n                   # spoke vector
+        e3 = np.array([0., 0., 1.])  # rim axial vector
+
+        K_e = self.EA / self.length
+
+        if tension:
+            K_t = self.tension / self.length
+        else:
+            K_t = 0.
+
+        return K_e*np.outer(n, n) + K_t*(np.eye(3) - np.outer(n, n))
+
     def calc_mass(self):
         'Return the spoke mass'
 
