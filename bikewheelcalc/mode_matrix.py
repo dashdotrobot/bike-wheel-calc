@@ -8,7 +8,7 @@ def xp(v):
     'Calculate cross-product matrix such that xp*u = v x u'
 
     return np.array([[0., -v[2], v[1]],
-                     [v[2], 0., v[0]],
+                     [v[2], 0., -v[0]],
                      [-v[1], v[0], 0.]])
 
 class ModeMatrix:
@@ -233,12 +233,14 @@ class ModeMatrix:
             T0 = s.tension if tension else 0.
 
             K_spk = (K_spk
-                     + Bu.T.dot(kf).dot(Bu)
-                     + Bu.T.dot(kf).dot(bx).dot(Bw)          # Changed sign!
-                     + Bw.T.dot(bx.T).dot(kf).dot(Bu)        # Changed sign and split!
-                     + Bw.T.dot(bx).dot(kf).dot(bx).dot(Bw)  # Transpose of term above!
-                     + T0*Bw.T.dot(nx).dot(Bu)               # Not symmetric!
-                     + T0*Bw.T.dot(nx).dot(bx).dot(Bw))      # Not symmetric!
+                     + Bu.T.dot(kf).dot(Bu)                  # Force-stiffness
+                     + Bu.T.dot(kf).dot(bx).dot(Bw)          #  - bs correction u-phi
+                     + Bw.T.dot(bx.T).dot(kf).dot(Bu)        #  - bs correction u-phi
+                     + Bw.T.dot(bx).dot(kf).dot(bx).dot(Bw)  #  - bs correction phi-phi
+                     + T0/2*Bw.T.dot(nx).dot(Bu)             # Moment stiffness
+                     + T0/2*Bu.T.dot(nx.T).dot(Bw)           #  - Transpose of above
+                     + T0/2*Bw.T.dot(nx).dot(bx).dot(Bw)     #  - Spoke offset correction
+                     + T0/2*Bw.T.dot(bx.T).dot(nx.T).dot(Bw))  #  - Transpose of above
 
         return K_spk
 
