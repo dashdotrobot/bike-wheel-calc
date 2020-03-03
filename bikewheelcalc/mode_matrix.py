@@ -221,7 +221,8 @@ class ModeMatrix:
 
         X_w = np.array([[0., 0., -wrot*1./self.wheel.rim.radius, 0.],
                         [0., 0., 0., 0.], [0., 0., 0., 1.]])
-        Xpw = grad*np.array([[0., -1., 0., 0.], [1., 0., 0., 0.], [0., 0., 0., 0.]])
+        Xpw = (grad/self.wheel.rim.radius*
+               np.array([[0., -1., 0., 0.], [1., 0., 0., 0.], [0., 0., 0., 0.]]))
 
         for s in self.wheel.spokes:
             Bu = self.B_theta(s.theta, comps=[0, 1, 2])
@@ -234,13 +235,13 @@ class ModeMatrix:
 
             K_spk = (K_spk
                      + Bu.T.dot(kf).dot(Bu)                  # Force-stiffness
-                     + Bu.T.dot(kf).dot(bx).dot(Bw)          #  - bs correction u-phi
-                     + Bw.T.dot(bx.T).dot(kf).dot(Bu)        #  - bs correction u-phi
-                     + Bw.T.dot(bx).dot(kf).dot(bx).dot(Bw)  #  - bs correction phi-phi
-                     + T0/2*Bw.T.dot(nx).dot(Bu)             # Moment stiffness
-                     + T0/2*Bu.T.dot(nx.T).dot(Bw)           #  - Transpose of above
-                     + T0/2*Bw.T.dot(nx).dot(bx).dot(Bw)     #  - Spoke offset correction
-                     + T0/2*Bw.T.dot(bx.T).dot(nx.T).dot(Bw))  #  - Transpose of above
+                     - Bu.T.dot(kf).dot(bx).dot(Bw)          #  - bs correction u-phi
+                     - Bw.T.dot(bx.T).dot(kf).dot(Bu)        #  - bs correction u-phi
+                     - Bw.T.dot(bx).dot(kf).dot(bx).dot(Bw)  #  - bs correction phi-phi
+                     + 0.*T0/2*Bw.T.dot(nx).dot(Bu)             # Moment stiffness
+                     + 0.*T0/2*Bu.T.dot(nx.T).dot(Bw)           #  - Transpose of above
+                     + 0.*T0/2*Bw.T.dot(nx).dot(bx).dot(Bw)     #  - Spoke offset correction
+                     + 0.*T0/2*Bw.T.dot(bx.T).dot(nx.T).dot(Bw))  #  - Transpose of above
 
         return K_spk
 
