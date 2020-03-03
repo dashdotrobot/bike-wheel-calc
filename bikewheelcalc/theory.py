@@ -109,7 +109,7 @@ def calc_buckling_tension_modematrix(wheel, smeared_spokes=False, coupling=True,
     return np.min(np.real(w_ab)[np.real(w_ab) > 0])
 
 
-def lat_mode_stiff(wheel, n, smeared_spokes=True, buckling=True, tension=True):
+def lat_mode_stiff(wheel, n, smeared_spokes=True, buckling=True, tension=True, mom_stiff=False):
     'Calculate lateral mode stiffness'
 
     kbar = wheel.calc_kbar(tension=tension)
@@ -118,24 +118,36 @@ def lat_mode_stiff(wheel, n, smeared_spokes=True, buckling=True, tension=True):
     kpp = kbar[3, 3]
 
     # shortcuts
-    ns = len(self.wheel.spokes)
-    R = self.wheel.rim.radius
-    EI = self.wheel.rim.young_mod * self.wheel.rim.I_lat
-    EIw = self.wheel.rim.young_mod * self.wheel.rim.I_warp
-    GJ = self.wheel.rim.shear_mod * self.wheel.rim.J_tor
+    ns = len(wheel.spokes)
+    R = wheel.rim.radius
+    EI = wheel.rim.young_mod * wheel.rim.I_lat
+    EIw = wheel.rim.young_mod * wheel.rim.I_warp
+    GJ = wheel.rim.shear_mod * wheel.rim.J_tor
     CT = GJ + EIw*n**2/R**2
+
+    Kb = pi*EI/R**3*(n**2 - 1)**2
+    Kt = pi*CT/R**3*(n**2 - 1)**2*n**2
+
+    if mom_stiff and tension:
+        s = wheel.spokes[0]
+        kup = kup - 1/2*ns*s.n[1]*s.tension/(2*np.pi*R)
 
     Tb = 0.
     if buckling:
-        Tb = np.sum([s.tension*s.n[1] for s in self.wheel.spokes]) / (2*pi*R)
+        Tb = np.sum([s.tension*s.n[1] for s in wheel.spokes]) / (2*pi*R)
 
     if n == 0:
         return 2*pi*R*(kuu - R**2*kup**2/(EI + R**2*kpp))
     elif n == 1:
         return pi*R*kuu + pi*(((EI/R**3 + CT/R**3)*(kpp/R + 2*R*kup) - kup**2)/
-                              (EI/R**3 + CT/R**3 + kpp/R))
-    elif n > 0 and isinstance(n, int):
-        pass
+                              (EI/R**3 + CT/R**3 + kpp/R)) - pi*Tb
+    elif n > 1 and isinstance(n, int):
+        return (pi*R*kuu
+                + (Kb*Kt
+                   + pi*kpp/R*(Kb*n**4 + Kt)
+                   + 2*pi**kup*(Kb*n**2 + Kt)
+                   - (n**2-1)**2*pi**2*kup**2)/(Kb + Kt + (n**2-1)**2*pi*kpp/R)
+                - pi*n**2*Tb)
     else:
         raise ValueError('Invalid value for integer mode n: {:s}'
                          .format(str(n)))
