@@ -214,7 +214,7 @@ class ModeMatrix:
 
         return K_spk
 
-    def K_spk_new(self, tension=True, grad=True, wrot=True):
+    def K_spk_new(self, tension=True, grad=True, wrot=True, momT=True):
         'Correct mode stiffness formulation, with gradients of u'
 
         K_spk = np.zeros((4 + self.n_modes*8, 4 + self.n_modes*8))
@@ -235,13 +235,11 @@ class ModeMatrix:
 
             K_spk = (K_spk
                      + Bu.T.dot(kf).dot(Bu)                  # Force-stiffness
-                     - Bu.T.dot(kf).dot(bx).dot(Bw)          #  - bs correction u-phi
-                     - Bw.T.dot(bx.T).dot(kf).dot(Bu)        #  - bs correction u-phi
-                     - Bw.T.dot(bx).dot(kf).dot(bx).dot(Bw)  #  - bs correction phi-phi
-                     + 0.*T0/2*Bw.T.dot(nx).dot(Bu)             # Moment stiffness
-                     + 0.*T0/2*Bu.T.dot(nx.T).dot(Bw)           #  - Transpose of above
-                     + 0.*T0/2*Bw.T.dot(nx).dot(bx).dot(Bw)     #  - Spoke offset correction
-                     + 0.*T0/2*Bw.T.dot(bx.T).dot(nx.T).dot(Bw))  #  - Transpose of above
+                     - Bu.T.dot(kf).dot(bx).dot(Bw)          #  - u-phi
+                     - Bw.T.dot(bx.T).dot(kf).dot(Bu)        #  - u-phi
+                     - Bw.T.dot(bx).dot(kf).dot(bx).dot(Bw)  #  - phi-phi
+                     + momT*T0/2*Bw.T.dot(nx).dot(bx).dot(Bw)       # Moment stiffness
+                     + momT*T0/2*Bw.T.dot(bx.T).dot(nx.T).dot(Bw))  #  - Make symmetric
 
         return K_spk
 
